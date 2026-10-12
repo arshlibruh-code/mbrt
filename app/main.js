@@ -49,24 +49,14 @@ map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribut
 map.once("load", () => document.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));
 new ResizeObserver(() => document.documentElement.style.setProperty("--bar-h", `${$("chat").offsetHeight}px`)).observe($("chat"));
 
-// ---- layout A / B / C, picked with ?layout= or the switch, remembered per browser
+// ---- tools overlay
 
-function setLayout(l) {
-  document.body.classList.remove("layout-a", "layout-b", "layout-c");
-  document.body.classList.add(`layout-${l}`);
-  for (const b of document.querySelectorAll("#layouts button")) b.setAttribute("aria-pressed", b.dataset.l === l);
-  try { localStorage.setItem("mbrt-layout", l); } catch {}
-}
-let savedLayout = null;
-try { savedLayout = localStorage.getItem("mbrt-layout"); } catch {}
-setLayout(new URLSearchParams(location.search).get("layout") ?? savedLayout ?? "b");
-for (const b of document.querySelectorAll("#layouts button")) b.addEventListener("click", () => setLayout(b.dataset.l));
 const setTools = (open) => {
   document.body.classList.toggle("tools-open", open);
   $("tools-toggle").setAttribute("aria-pressed", open);
 };
 $("tools-toggle").addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
-const syncFeed = () => document.body.classList.toggle("has-feed", $("log").children.length > 0 || $("call").textContent !== "");
+const syncFeed = () => document.body.classList.toggle("has-feed", $("log").children.length > 0);
 
 // ---- tab: title says what is happening, the orb favicon brightens while thinking
 
@@ -149,27 +139,27 @@ async function mapAction(a) {
     case "style":
       if (!a.style) throw new Error("map style: pick street, satellite or dark");
       map.setStyle(STYLES[a.style], { diff: false });
-      log("ok", "map", `style ${a.style}`);
+      result(`${a.style} map`);
       return [];
     case "zoom":
       if (a.zoom == null) throw new Error("map zoom: give a level");
       map.easeTo({ zoom: a.zoom, duration: 800 });
-      log("ok", "map", `zoom ${a.zoom}`);
+      result(`zoom ${a.zoom}`);
       return [];
     case "center":
       if (a.lat == null || a.lon == null) throw new Error("map center: give lat and lon");
       map.flyTo({ center: [a.lon, a.lat], zoom: Math.max(map.getZoom(), 10) });
-      log("ok", "map", `center ${a.lat}, ${a.lon}`);
+      result(`centered on ${a.lat}, ${a.lon}`);
       return [];
     case "terrain":
       setTerrain(!terrainOn);
-      log("ok", "map", `3D terrain ${terrainOn ? "on" : "off"}`);
+      result(`3D terrain ${terrainOn ? "on" : "off"}`);
       return [];
     case "clear": {
       const kinds = !a.clear || a.clear === "all" ? null : CLEAR[a.clear];
       const before = drawn.length;
       drawn = kinds ? drawn.filter((f) => !kinds.includes(f.properties.kind)) : [];
-      log("ok", "map", `cleared ${before - drawn.length} features`);
+      result(`cleared ${before - drawn.length} features`);
       refresh();
       return [];
     }
@@ -184,24 +174,71 @@ map.on("click", (e) => {
   const hit = map.queryRenderedFeatures(e.point, { layers: ["points", "lines", "straight", "area-fill"] })[0];
   selectedFid = hit?.properties.fid ?? 0;
   refresh();
-  if (hit) log("ok", "selected", `${hit.properties.kind}: ${hit.properties.label} (use @selected)`);
+  if (hit) log("ok", "selected", `${hit.properties.kind}: ${hit.properties.label} (use @selected)`), settleSoon();
 });
 for (const id of ["points", "lines", "straight", "area-fill"]) {
   map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
   map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
 }
 
-// ---- log and chart
+// ---- the feed: your message, the pick in plain words, the steps, one result line
 
-function log(status, source, text) {
+function line(cls, label, text, raw) {
   const li = document.createElement("li");
-  li.className = status;
-  li.innerHTML = `<b></b><span></span>`;
-  li.querySelector("b").textContent = source;
-  li.querySelector("span").textContent = text;
+  li.className = cls;
+  const b = document.createElement("b"), span = document.createElement("span");
+  b.textContent = label;
+  span.textContent = text;
+  if (raw && raw !== text) {
+    const small = document.createElement("small");
+    small.textContent = raw;
+    span.append(small);
+  }
+  li.append(b, span);
   $("log").append(li);
-  li.scrollIntoView({ block: "nearest" });
+  span.scrollIntoView({ block: "nearest" });
   syncFeed();
+  return li;
+}
+const log = (status, source, text, raw) => line(`step ${status}`, source, text, raw);
+const headline = (text) => line("head", "", text);
+function result(text, status = "ok") {
+  line(`result ${status}`, "", text);
+  settleSoon();
+}
+
+const nice = (p) => (p === "@me" ? "your location" : p === "@selected" ? "the selected feature" : p);
+const trip = (xs) => xs.map(nice).join(" → ");
+function describe({ tool, args: a }) {
+  try {
+    switch (tool) {
+      case "markers": return `markers · ${a.places.map(nice).join(", ")}`;
+      case "route": return `route · ${a.profile} · ${trip(a.waypoints)}`;
+      case "line": return `straight line · ${trip(a.places)}`;
+      case "buffer": return `buffer · ${a.radius_km.join(" / ")} km · ${a.centers.map(nice).join(", ")}`;
+      case "isochrone": return `isochrone · ${a.values.join(" / ")} ${a.unit === "km" ? "km" : "min"} ${a.profile} · ${nice(a.center)}`;
+      case "polygon": return `polygon · ${a.vertices.map(nice).join(", ")}`;
+      case "elevation_profile": return `elevation · ${trip(a.waypoints)}`;
+      case "boundary": return `boundary · ${a.place}`;
+      case "map": return `map · ${[a.action, a.style, a.zoom, a.clear, a.lat != null ? `${a.lat}, ${a.lon}` : null].filter((x) => x != null).join(" ")}`;
+      case "reply": return `reply · ${a.kind}`;
+    }
+  } catch {}
+  return tool;
+}
+// the pick in words; clicking it unfolds the exact JSON
+function pick(source, call, ms) {
+  const li = line("pick", source, `${describe(call)}${ms ? `   ${ms} ms` : ""}`);
+  const json = line("json", "", JSON.stringify(call));
+  li.addEventListener("click", () => json.classList.toggle("open"));
+}
+
+// once a run ends, the steps fade after 8 s and your message plus the result stay; hover brings them back
+let settleTimer = 0;
+function settleSoon() {
+  clearTimeout(settleTimer);
+  document.body.classList.remove("settled");
+  settleTimer = setTimeout(() => document.body.classList.add("settled"), 8000);
 }
 
 function chart(profile) {
@@ -217,7 +254,7 @@ function chart(profile) {
   $("chart").hidden = false;
 }
 
-const baseCtx = { log, chart, mapAction, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
+const baseCtx = { log, chart, result, mapAction, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
 
 // ---- the form is generated from the same tool schema the model will fill
 
@@ -276,9 +313,10 @@ function readArgs(t) {
 }
 
 const resetOutput = () => {
+  clearTimeout(settleTimer);
+  document.body.classList.remove("settled");
   $("log").replaceChildren();
   $("chart").hidden = true;
-  $("call").textContent = "";
   syncFeed();
 };
 
@@ -286,8 +324,10 @@ function run(e) {
   e.preventDefault();
   const t = TOOLS.find((t) => t.name === $("tool").value);
   resetOutput();
-  if (document.body.classList.contains("layout-c")) setTools(false); // the overlay sits on the map
-  runCall({ tool: t.name, args: readArgs(t) });
+  setTools(false); // the overlay sits on the map
+  const call = { tool: t.name, args: readArgs(t) };
+  pick("form", call);
+  runCall(call);
 }
 
 // the model only names the call; the server holds the Groq key (app/api/chat.js).
@@ -314,18 +354,18 @@ async function ask(e) {
   $("cancel-notice").classList.remove("visible");
   thinking(true);
   resetOutput();
-  log("ok", "you", message);
+  headline(message);
   try {
     const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message }), signal: ctrl.signal });
     const body = await res.json().catch(() => ({ error: `server ${res.status}` }));
     if (stale()) return;
     if (!res.ok) throw new Error(body.error);
-    log("ok", "Groq", `${body.model} chose ${body.call.tool} in ${body.ms} ms`);
+    pick("Groq", body.call, body.ms);
     $("tool").value = body.call.tool; // mirror into the form, so the call can be edited and rerun by hand
     renderFields(body.call.args);
     failed = !(await runCall(body.call, stale));
   } catch (err) {
-    if (!stale()) log("bad", "error", err.message), (failed = true);
+    if (!stale()) log("bad", "error", err.message), settleSoon(), (failed = true);
   } finally {
     if (!stale()) {
       inflight = null;
@@ -336,15 +376,13 @@ async function ask(e) {
 }
 
 async function runCall(call, stale = () => false) {
-  const ctx = { ...baseCtx, log: (...a) => stale() || log(...a), chart: (p) => stale() || chart(p) };
-  $("call").textContent = JSON.stringify(call);
-  syncFeed();
+  const ctx = { ...baseCtx, log: (...a) => stale() || log(...a), chart: (p) => stale() || chart(p), result: (...a) => stale() || result(...a) };
   if (!validate[call.tool]?.(call.args)) {
-    ctx.log("bad", "schema", validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`);
+    ctx.log("bad", "schema", "The model's call does not fit the tool", validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`);
+    settleSoon();
     return false;
   }
   $("run").disabled = true;
-  const t0 = performance.now();
   try {
     const feats = await execute(call, ctx);
     if (stale()) return false;
@@ -356,10 +394,10 @@ async function runCall(call, stale = () => false) {
       if (w === e2 && s === n) map.flyTo({ center: [w, s], zoom: Math.max(map.getZoom(), 12) });
       else map.fitBounds([w, s, e2, n], { padding: { top: 60, left: 60, right: 60, bottom: $("chat").offsetHeight + 40 }, maxZoom: 14 });
     }
-    log("ok", "done", `${feats.length} features in ${Math.round(performance.now() - t0)} ms`);
     return true;
   } catch (err) {
-    ctx.log("bad", "error", err.message);
+    ctx.log("bad", "error", err.message, err.raw);
+    settleSoon();
     return false;
   } finally {
     $("run").disabled = false;

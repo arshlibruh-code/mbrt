@@ -23,19 +23,15 @@
     .glass { background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--hair); }
     .cap, label > span, #log b, dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink2); }
 
-    /* top-left wordmark and the tools toggle, top-center layout switch */
+    /* top-left wordmark and the tools toggle */
     #top { position: fixed; top: 12px; left: 12px; z-index: 3; display: flex; gap: 6px; align-items: stretch; }
     .mark { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.04em; padding: 5px 10px; }
-    #top button, #layouts button { font: 700 10px var(--font); text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); cursor: pointer; padding: 0 12px; }
+    #top button { font: 700 10px var(--font); text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); cursor: pointer; padding: 0 12px; }
     #top button[aria-pressed="true"] { color: var(--cyan); }
-    #layouts { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; }
-    #layouts button { height: 28px; border-right-width: 0; }
-    #layouts button:last-child { border-right-width: 1px; }
-    #layouts button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.14); }
 
-    /* panel contents, shared by all layouts */
-    #panel { z-index: 2; }
-    #tools, #feed { padding: 12px; }
+    /* tools: an overlay on the map, opened from the top-left */
+    #tools { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(360px, 92vw); max-height: 70vh; overflow-y: auto; z-index: 4; padding: 12px; }
+    body:not(.tools-open) #tools { display: none; }
     #desc { color: var(--ink2); margin: 6px 0 10px; }
     label { display: block; margin-bottom: 8px; }
     label > span { display: block; margin-bottom: 3px; }
@@ -49,49 +45,39 @@
     .row button { flex: 1; cursor: pointer; padding: 8px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; }
     #run { background: var(--ink); color: #0b0d10; border-color: var(--ink); }
     #run:disabled { opacity: 0.5; cursor: wait; }
-    #call { margin: 0 0 8px; font: 12px/1.35 var(--font); color: var(--muted); white-space: pre-wrap; word-break: break-word; }
-    #call:empty { display: none; }
-    #chart { margin-bottom: 8px; border: 1px solid var(--hair); }
+
+    /* the feed, written onto the map above the bar: labels right of a center axis, text left of it */
+    #feed { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + 10px); width: min(760px, 94vw); max-height: 42vh; overflow-y: auto;
+      z-index: 2; pointer-events: none; scrollbar-width: none; text-shadow: 0 1px 2px #000, 0 0 10px #000, 0 0 18px rgba(0, 0, 0, 0.8); }
+    body:not(.has-feed) #feed { display: none; }
+    #log { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; row-gap: 3px; }
+    #log li { display: contents; }
+    #log b, #log span, #chart { pointer-events: auto; transition: opacity 1.2s ease; }
+    #log b { text-align: right; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink2); padding-top: 2px; }
+    #log span { text-align: left; font-variant-numeric: tabular-nums; }
+    #log small { display: block; font-size: 10px; color: var(--muted); }
+    #log .step.ok b { color: var(--good); }
+    #log .step.warn b { color: var(--warn); }
+    #log .step.bad b { color: var(--bad); }
+    #log .head b, #log .result b, #log .json b { display: none; }
+    #log .head span, #log .result span, #log .json span { grid-column: 1 / -1; text-align: center; }
+    #log .head span { font-weight: 700; font-size: 18px; text-transform: uppercase; color: #fff; margin-bottom: 4px; }
+    #log .result span { font-weight: 700; font-size: 22px; color: #fff; margin-top: 4px; }
+    #log .result.warn span { color: #e2b44f; }
+    #log .pick b { color: var(--cyan); }
+    #log .pick b, #log .pick span { cursor: pointer; }
+    #log .json span { display: none; font-size: 11px; color: var(--muted); word-break: break-word; }
+    #log .json.open span { display: block; }
+    #chart { margin: 6px auto 0; width: min(420px, 100%); background: var(--glass); border: 1px solid var(--hair); text-shadow: none; }
     #chart svg { display: block; width: 100%; height: 80px; }
     #chart polygon { fill: rgba(255, 255, 255, 0.1); }
     #chart polyline { fill: none; stroke: var(--ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
     #chart dl { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 6px 7px; border-top: 1px solid var(--hair); }
     #chart dd { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
     #chart dt { grid-row: 1; }
-    #log { list-style: none; margin: 0; padding: 0; }
-    #log li { padding: 4px 8px; border-left: 2px solid var(--muted); margin-bottom: 3px; background: rgba(255, 255, 255, 0.03); }
-    #log li.ok { border-color: var(--good); }
-    #log li.warn { border-color: var(--warn); background: rgba(184, 134, 11, 0.14); }
-    #log li.bad { border-color: var(--bad); background: rgba(184, 86, 74, 0.16); }
-    #log b { display: block; }
-    #log span { font-variant-numeric: tabular-nums; }
-
-    /* A: one frosted card, tools and steps together */
-    .layout-a #tools-toggle { display: none; }
-    .layout-a #panel { position: fixed; top: 52px; left: 12px; width: 320px; max-height: calc(100vh - var(--bar-h) - 64px); overflow-y: auto; }
-    .layout-a #tools, .layout-a #feed { background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
-    .layout-a #feed { border-top: 1px solid var(--hair); }
-    .layout-b #panel, .layout-c #panel { background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
-    .layout-a:not(.has-feed) #feed { display: none; }
-
-    /* B: chat only; steps stack above the bar, tools in a drawer */
-    .layout-b #panel, .layout-c #panel { display: contents; }
-    .layout-b #tools { position: fixed; top: 52px; left: 12px; width: 320px; max-height: calc(100vh - var(--bar-h) - 64px); overflow-y: auto; z-index: 2; }
-    .layout-b #feed { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + 12px); width: min(560px, 92vw); max-height: 34vh; overflow-y: auto; z-index: 2; }
-    .layout-b:not(.tools-open) #tools, .layout-c:not(.tools-open) #tools { display: none; }
-    .layout-b:not(.has-feed) #feed, .layout-c:not(.has-feed) #feed { display: none; }
-
-    /* C: steps written straight onto the map, tools as an overlay */
-    .layout-c #tools { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(360px, 92vw); max-height: 70vh; overflow-y: auto; z-index: 4; }
-    .layout-c #feed { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + 6px); width: min(720px, 92vw); max-height: 40vh; overflow-y: auto;
-      z-index: 2; background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; text-align: center;
-      text-shadow: 0 1px 2px #000, 0 0 10px #000, 0 0 18px rgba(0, 0, 0, 0.8); }
-    .layout-c #log li { border: 0; background: none; padding: 1px 0; margin: 0; }
-    .layout-c #log b { display: inline; margin-right: 8px; }
-    .layout-c #log li.ok b { color: var(--good); }
-    .layout-c #log li.warn b { color: var(--warn); }
-    .layout-c #log li.bad b { color: var(--bad); }
-    .layout-c #chart { background: var(--glass); text-shadow: none; }
+    /* settled: steps fade, your message and the result stay, errors stay; hovering the feed brings it all back */
+    .settled #log .step:not(.bad) > *, .settled #log .pick > *, .settled #log .json > * { opacity: 0; }
+    .settled #feed:hover #log > li > * { opacity: 1; }
 
     /* the chat bar, carried over from the first mbrt: frosted, big, centered, an orb while thinking */
     #chat { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; padding: 6vh 1vh calc(6vh + env(safe-area-inset-bottom));
@@ -132,31 +118,25 @@
     @media (max-width: 700px) {
       #chat { padding: 3vh 16px calc(3vh + env(safe-area-inset-bottom)); }
       #msg { font-size: 20px; }
-      .layout-a #panel, .layout-b #tools { left: 8px; right: 8px; width: auto; max-height: 38vh; }
-      #layouts { left: auto; right: 12px; transform: none; }
       .maplibregl-ctrl-top-right { top: 48px; }
     }
   </style>
 </head>
-<body class="layout-b">
+<body>
   <div id="map"></div>
   <header id="top"><span class="mark glass">mbrt</span><button id="tools-toggle" class="glass" type="button" aria-pressed="false">tools</button></header>
-  <nav id="layouts" aria-label="layout"><button class="glass" data-l="a">A</button><button class="glass" data-l="b">B</button><button class="glass" data-l="c">C</button></nav>
-  <aside id="panel" class="glass">
-    <section id="tools" class="glass">
-      <form id="form" autocomplete="off">
-        <label><span>tool</span><select id="tool"></select></label>
-        <p id="desc"></p>
-        <fieldset id="fields" style="border:0;margin:0;padding:0"></fieldset>
-        <div class="row"><button id="run" type="submit">Run</button><button id="clear" type="button">Clear</button></div>
-      </form>
-    </section>
-    <section id="feed" class="glass">
-      <pre id="call"></pre>
-      <div id="chart" hidden></div>
-      <ol id="log"></ol>
-    </section>
-  </aside>
+  <section id="tools" class="glass">
+    <form id="form" autocomplete="off">
+      <label><span>tool</span><select id="tool"></select></label>
+      <p id="desc"></p>
+      <fieldset id="fields" style="border:0;margin:0;padding:0"></fieldset>
+      <div class="row"><button id="run" type="submit">Run</button><button id="clear" type="button">Clear</button></div>
+    </form>
+  </section>
+  <section id="feed">
+    <ol id="log"></ol>
+    <div id="chart" hidden></div>
+  </section>
   <div id="credit">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>
   <form id="chat" autocomplete="off">
     <div class="field">

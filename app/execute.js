@@ -3,20 +3,43 @@
 import * as turf from "@turf/turf";
 
 const PHOTON = "https://photon.komoot.io/api/";
-const VALHALLA = "https://valhalla1.openstreetmap.de";
+const VALHALLA = "https://valhalla1.openstreetmap.de"; // isochrones and heights
+const OSRM = "https://routing.openstreetmap.de"; // routes: no length cap, unlike Valhalla's 1,500 km
+const OSRM_PROFILE = { driving: "car", walking: "foot", cycling: "bike" };
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 const COSTING = { driving: "auto", walking: "pedestrian", cycling: "bicycle" };
 
 // FOSSGIS Valhalla and Nominatim allow 1 request per second; Photon asks to be fair
-const gaps = { [VALHALLA]: 1100, [NOMINATIM]: 1100, [PHOTON]: 300 };
+const gaps = { [VALHALLA]: 1100, [OSRM]: 1100, [NOMINATIM]: 1100, [PHOTON]: 300 };
+
+// what a person should read first; the server's own words travel along as `raw`
+const HUMAN = [
+  [/max distance/i, "Too far for this service"],
+  [/NoRoute|Unable to find a route|No path could be found/i, "No road connects these places"],
+  [/No suitable edges|Cannot find a path|NoSegment/i, "No road near this place"],
+  [/\b429\b|Too Many Requests/i, "Rate limited, wait a moment and retry"],
+  [/TimeoutError|aborted|Failed to fetch|NetworkError/i, "The service did not answer"],
+  [/ 50[0234]\b/, "The service is having trouble, try again in a moment"],
+];
+export function humanError(raw) {
+  const err = new Error(HUMAN.find(([re]) => re.test(raw))?.[1] ?? raw);
+  err.raw = raw;
+  return err;
+}
 const lastCall = {};
 async function politeFetch(base, url, init) {
   const wait = (lastCall[base] ?? 0) + gaps[base] - Date.now();
   lastCall[base] = Date.now() + Math.max(wait, 0);
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(30000) });
+  let res;
+  try {
+    res = await fetch(url, { ...init, signal: AbortSignal.timeout(30000) });
+  } catch (e) {
+    throw humanError(`${new URL(base).host}: ${e.name} ${e.message}`);
+  }
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(`${new URL(base).host} ${res.status} ${body?.error ?? body?.message ?? ""}`.trim());
+  if (!res.ok || (base === OSRM && body?.code !== "Ok"))
+    throw humanError(`${new URL(base).host} ${res.status} ${body?.error ?? body?.message ?? body?.code ?? ""}`.trim());
   return body;
 }
 const valhalla = (path, body) =>
@@ -65,34 +88,22 @@ const geocodeAll = async (names, ctx) => {
   return out;
 };
 
-// Valhalla encodes shapes as polyline with 6 decimals
-function decode6(str) {
-  const out = [];
-  let i = 0, lat = 0, lon = 0;
-  while (i < str.length) {
-    for (const axis of [0, 1]) {
-      let shift = 0, result = 0, b;
-      do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      const d = result & 1 ? ~(result >> 1) : result >> 1;
-      axis ? (lon += d) : (lat += d);
-    }
-    out.push([lon / 1e6, lat / 1e6]);
-  }
-  return out;
-}
-
 async function routeLine(names, profile, ctx) {
   const pts = await geocodeAll(names, ctx);
-  const body = await valhalla("route", {
-    locations: pts.map((p) => ({ lon: p.coord[0], lat: p.coord[1] })),
-    costing: COSTING[profile] ?? "auto",
-    units: "kilometers",
-  });
-  const coords = body.trip.legs.flatMap((l) => decode6(l.shape));
-  const { length, time } = body.trip.summary;
-  ctx.log("ok", "Valhalla", `${profile} route ${length.toFixed(1)} km, ${Math.round(time / 60)} min`);
-  return { pts, line: turf.lineString(coords), km: length, min: time / 60 };
+  const path = pts.map((p) => p.coord.join(",")).join(";");
+  const p = OSRM_PROFILE[profile] ?? "car";
+  const body = await politeFetch(OSRM, `${OSRM}/routed-${p}/route/v1/driving/${path}?overview=full&geometries=geojson`);
+  const r = body.routes[0];
+  const km = r.distance / 1000, min = r.duration / 60;
+  ctx.log("ok", "OSRM", `${profile} route ${km.toFixed(1)} km, ${duration(min)}`);
+  return { pts, line: turf.lineString(r.geometry.coordinates), km, min };
 }
+
+export function duration(min) {
+  const m = Math.round(min), h = Math.floor(m / 60);
+  return h === 0 ? `${m} min` : m % 60 === 0 ? `${h} h` : `${h} h ${m % 60} min`;
+}
+const km1 = (n) => n.toLocaleString("en-IN", { maximumFractionDigits: n < 100 ? 1 : 0 });
 
 const feature = (geom, kind, label, extra = {}) => ({ ...geom, properties: { ...geom.properties, kind, label, ...extra } });
 
@@ -101,12 +112,14 @@ export async function execute(call, ctx) {
   switch (call.tool) {
     case "markers": {
       const pts = await geocodeAll(a.places, ctx);
+      ctx.result(pts.length === 1 ? pts[0].label : `${pts.length} places`);
       return pts.map((p, i) => feature(turf.point(p.coord), "marker", `${i + 1}. ${p.label}`));
     }
     case "route": {
       const r = await routeLine(a.waypoints, a.profile, ctx);
+      ctx.result(`${km1(r.km)} km · ${duration(r.min)}`);
       return [
-        feature(r.line, "route", `${r.km.toFixed(1)} km · ${Math.round(r.min)} min`),
+        feature(r.line, "route", `${km1(r.km)} km · ${duration(r.min)}`),
         ...r.pts.map((p, i) => feature(turf.point(p.coord), "marker", `${i + 1}. ${p.label}`)),
       ];
     }
@@ -115,11 +128,13 @@ export async function execute(call, ctx) {
       const line = turf.lineString(pts.map((p) => p.coord));
       const km = turf.length(line);
       ctx.log("ok", "Turf", `straight line ${km.toFixed(1)} km`);
+      ctx.result(`${km1(km)} km as the crow flies`);
       return [feature(line, "line", `${km.toFixed(1)} km`), ...pts.map((p, i) => feature(turf.point(p.coord), "marker", `${i + 1}. ${p.label}`))];
     }
     case "buffer": {
       const pts = await geocodeAll(a.centers, ctx);
       if (a.radius_km.length !== 1 && a.radius_km.length !== pts.length) throw new Error("buffer: give one radius, or one per center");
+      ctx.result(pts.length === 1 ? `${a.radius_km[0]} km around ${pts[0].label}` : `${pts.length} buffers`);
       return pts.flatMap((p, i) => {
         const r = a.radius_km.length === 1 ? a.radius_km[0] : a.radius_km[i];
         ctx.log("ok", "Turf", `${r} km buffer around ${p.label}`);
@@ -136,6 +151,8 @@ export async function execute(call, ctx) {
         polygons: true,
       });
       ctx.log("ok", "Valhalla", `isochrone ${a.values.join(", ")} ${a.unit} ${a.profile}`);
+      const outer = body.features.reduce((m, f) => Math.max(m, turf.area(f) / 1e6), 0);
+      ctx.result(`${km1(outer)} km² reachable in ${Math.max(...a.values)} ${a.unit === "km" ? "km" : "min"}`);
       return [
         ...body.features.map((f) => feature({ type: "Feature", geometry: f.geometry, properties: {} }, "isochrone", `${f.properties.contour} ${a.unit}`)),
         feature(turf.point(p.coord), "marker", p.label),
@@ -147,6 +164,7 @@ export async function execute(call, ctx) {
       const poly = turf.polygon([[...ring, ring[0]]]);
       const km2 = turf.area(poly) / 1e6;
       ctx.log("ok", "Turf", `polygon ${km2.toFixed(0)} km²`);
+      ctx.result(`${km1(km2)} km²`);
       return [feature(poly, "polygon", `${km2.toFixed(0)} km²`), ...pts.map((p, i) => feature(turf.point(p.coord), "marker", `${i + 1}. ${p.label}`))];
     }
     case "elevation_profile": {
@@ -165,6 +183,9 @@ export async function execute(call, ctx) {
       const profile = body.range_height.map(([d, h]) => [d / 1000, h]);
       const hs = profile.map((p) => p[1]).filter((h) => h != null);
       ctx.log("ok", "Valhalla", `heights at ${n} points, ${Math.min(...hs)} to ${Math.max(...hs)} m`);
+      let climb = 0;
+      for (let i = 1; i < hs.length; i++) climb += Math.max(0, hs[i] - hs[i - 1]);
+      ctx.result(`${km1(Math.round(climb))} m climb · high point ${km1(Math.max(...hs))} m`);
       ctx.chart(profile);
       return [feature(line, "route", `${km.toFixed(1)} km profile`)];
     }
@@ -178,12 +199,13 @@ export async function execute(call, ctx) {
         store(key, f);
       }
       ctx.log("ok", "Nominatim", `${f.properties.display_name} (${f.properties.addresstype})`);
+      ctx.result(`${a.place} · ${km1(turf.area(f) / 1e6)} km²`);
       return [feature({ type: "Feature", geometry: f.geometry, properties: {} }, "boundary", a.place)];
     }
     case "map":
       return ctx.mapAction(a);
     case "reply":
-      ctx.log(a.kind === "chat" ? "ok" : "warn", "reply", `${a.kind}: ${a.text}`);
+      ctx.result(a.text, a.kind === "chat" ? "ok" : "warn");
       return [];
   }
   throw new Error(`unknown tool ${call.tool}`);
