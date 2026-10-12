@@ -1,7 +1,8 @@
 // The model's whole job: turn one chat message into one of these calls (a plan for several steps).
 // Places stay as names; the geocoder resolves them, never the model.
 
-const place = { type: "string", description: 'A place name as the user meant it, e.g. "Koramangala, Bengaluru". "@selected" = the feature the user picked on the map, "@me" = the user\'s location.' };
+// "@me" and "@selected" are explained once in SYSTEM; this description repeats in every tool, so it stays short
+const place = { type: "string", description: 'Place name, e.g. "Koramangala, Bengaluru", or "@me" / "@selected"' };
 const places = { type: "array", items: place, minItems: 1 };
 const trip = { ...places, minItems: 2 }; // a route or line needs two ends; with fewer, reply clarify
 const profile = { type: "string", enum: ["driving", "walking", "cycling"] };
