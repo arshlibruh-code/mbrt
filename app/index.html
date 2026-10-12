@@ -33,12 +33,40 @@
     /* tools: an overlay on the map, opened from the top-left */
     #tools { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(360px, 92vw); max-height: 70vh; overflow-y: auto; z-index: 4; padding: 12px; }
     body:not(.tools-open) #tools { display: none; }
-    #desc { color: var(--ink2); margin: 6px 0 10px; }
+    #desc { color: var(--ink2); margin: 8px 0 10px; min-height: 18px; }
+    #tools-close { position: absolute; top: 6px; right: 8px; width: 26px; height: 26px; background: none; border: 0; color: var(--ink2); font: 18px/1 var(--font); cursor: pointer; }
+    #tools-close:hover { color: #fff; }
+    #tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 18px 0 0; }
+    .tile { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px 7px; cursor: pointer; color: var(--ink2);
+      background: var(--field); border: 1px solid var(--hair); font: 700 10px var(--font); letter-spacing: .1em; text-transform: uppercase; }
+    .tile:hover { color: var(--ink); }
+    .tile[aria-pressed="true"] { color: #fff; border-color: var(--cyan); background: rgba(8, 155, 223, 0.12); }
+    .field { margin-bottom: 10px; }
+    .flabel { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    .flabel span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink2); }
+    .flabel i { font-style: normal; font-size: 10px; color: var(--muted); }
+    .stop { display: grid; grid-template-columns: 14px 1fr 22px; align-items: center; gap: 4px; margin-bottom: 4px; }
+    .stop .found { grid-column: 2 / 4; }
+    .grip { color: var(--muted); cursor: grab; font-size: 11px; letter-spacing: -2px; user-select: none; }
+    .stop .x, .more { background: none; border: 0; color: var(--muted); cursor: pointer; font: 14px var(--font); }
+    .stop .x:hover, .more:hover { color: #fff; }
+    .more { font-size: 11px; letter-spacing: .06em; padding: 2px 0; }
+    .found { display: block; font-size: 10.5px; color: var(--muted); margin: 2px 0 0 2px; min-height: 0; }
+    .found.ok { color: var(--good); }
+    .found.bad { color: var(--bad); }
+    .unitrow { display: flex; gap: 4px; align-items: center; }
+    .unitrow input { flex: 1; }
+    .unitrow b, .unitrow select { flex: none; width: auto; font-size: 11px; color: var(--ink2); letter-spacing: .08em; text-transform: uppercase; }
+    .seg { display: flex; gap: 0; }
+    .seg button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 4px; cursor: pointer; color: var(--ink2);
+      background: var(--field); border: 1px solid var(--hair); margin-left: -1px; font: 11px var(--font); letter-spacing: .06em; }
+    .seg button[aria-pressed="true"] { color: #fff; border-color: var(--cyan); background: rgba(8, 155, 223, 0.12); position: relative; }
+    .mapaction .sub { margin-top: 6px; }
     label { display: block; margin-bottom: 8px; }
     label > span { display: block; margin-bottom: 3px; }
     label i { color: var(--muted); font-style: normal; }
-    #tools input, #tools select, #tools textarea, #tools button { font: 13px/1.3 var(--font); color: var(--ink); background: var(--field); border: 1px solid var(--hair); }
-    #tools input, #tools select, #tools textarea { width: 100%; padding: 6px 7px; }
+    #tools input, #tools select, #tools textarea, #tools .row button { font: 13px/1.3 var(--font); color: var(--ink); background: var(--field); border: 1px solid var(--hair); }
+    #tools input, #tools select { width: 100%; padding: 6px 7px; }
     select option { background: #15181c; }
     textarea { resize: vertical; }
     #tools input:focus, #tools select:focus, #tools textarea:focus { outline: 1px solid var(--cyan); outline-offset: -1px; }
@@ -117,6 +145,9 @@
     #msg.shake { animation: shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
     @keyframes shake { 15% { transform: translateX(-10px); } 30% { transform: translateX(8px); } 45% { transform: translateX(-5px); } 60% { transform: translateX(3px); } 75% { transform: translateX(-1px); } 100% { transform: none; } }
     @media (prefers-reduced-motion: reduce) { #msg.shake { animation: none; } }
+    #tools-open { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); z-index: 2; width: 38px; height: 38px; display: grid; place-items: center;
+      cursor: pointer; color: rgba(255, 255, 255, 0.55); background: var(--glass); border: 1px solid var(--hair); }
+    #tools-open:hover, #tools-open[aria-pressed="true"] { color: var(--cyan); border-color: var(--cyan); }
     #cancel-notice { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
       font-size: 10px; text-transform: uppercase; color: rgba(255, 255, 255, 0.4); opacity: 0; transition: opacity 0.3s ease; }
     #cancel-notice.visible { opacity: 1; }
@@ -155,11 +186,12 @@
   <div id="map"></div>
   <header id="top"><span class="mark glass" aria-label="mbrt"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6" fill="none" stroke="#e9ebed" stroke-width="1.8"/><rect x="25.4" y="3" width="3.6" height="3.6" fill="#089BDF"/><path d="M9.5 23V11h13v12M16 11v12" fill="none" stroke="#e9ebed" stroke-width="3.4"/></svg><svg height="17" viewBox="-24 -809 2993 918" aria-hidden="true"><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="#08080c" stroke="#d9e2df" stroke-width="109" paint-order="stroke" stroke-linejoin="miter"/><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="none" stroke="#08080c" stroke-width="38" stroke-linejoin="miter"/></svg></span></header>
   <section id="tools" class="glass">
+    <button type="button" id="tools-close" title="close (esc)" aria-label="close tools">×</button>
     <form id="form" autocomplete="off">
-      <label><span>tool</span><select id="tool"></select></label>
+      <div id="tiles"></div>
       <p id="desc"></p>
-      <fieldset id="fields" style="border:0;margin:0;padding:0"></fieldset>
-      <div class="row"><button id="run" type="submit">Run</button><button id="clear" type="button">Clear</button></div>
+      <div id="fields"></div>
+      <div class="row"><button id="run" type="submit">Run</button><button id="clear" type="button">Clear map</button></div>
     </form>
   </section>
   <section id="feed">
@@ -171,6 +203,7 @@
       <span id="cancel-notice">sending this will cancel the current request</span>
       <input id="msg" placeholder="Ask the map anything" maxlength="500" aria-label="Ask the map">
     </div>
+    <button type="button" id="tools-open" title="tools" aria-label="tools" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </form>
   <script type="module" src="./main.js"></script>
 </body>

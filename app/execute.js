@@ -86,18 +86,25 @@ async function geocode(name, ctx) {
     const coord = f.geometry.type === "Point" ? f.geometry.coordinates : turf.centroid(f).geometry.coordinates;
     return { coord, label: f.properties.label };
   }
+  const hit = await lookup(name);
+  if (!hit) throw Object.assign(new Error(`Photon: no match for "${name}"`), { kind: "nomatch", place: name });
+  ctx.log("ok", "Photon", `${name} → ${hit.found} (${fmt(hit.coord)})`);
+  return { coord: hit.coord, label: name.split(",")[0] };
+}
+
+// a place name -> { coord, found } or null, cached; the tools form uses it to check names as you type them
+export async function lookup(name) {
   const key = `geo:${name.toLowerCase()}`;
   let hit = cached(key);
   if (!hit) {
     const body = await politeFetch(PHOTON, `${PHOTON}?q=${encodeURIComponent(name)}&limit=1`);
     const f = body?.features?.[0];
-    if (!f) throw Object.assign(new Error(`Photon: no match for "${name}"`), { kind: "nomatch", place: name });
+    if (!f) return null;
     const p = f.properties;
     hit = { coord: f.geometry.coordinates, found: [p.name, p.city ?? p.county, p.state, p.country].filter(Boolean).join(", ") };
     store(key, hit);
   }
-  ctx.log("ok", "Photon", `${name} → ${hit.found} (${fmt(hit.coord)})`);
-  return { coord: hit.coord, label: name.split(",")[0] };
+  return hit;
 }
 
 const fmt = ([lon, lat]) => `${lat.toFixed(4)}, ${lon.toFixed(4)}`;

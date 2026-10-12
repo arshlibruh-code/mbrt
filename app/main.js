@@ -5,7 +5,8 @@ import { bbox } from "@turf/turf";
 import Ajv from "ajv";
 import { TOOLS } from "../eval/tools.js";
 import golden from "../eval/golden.json";
-import { execute, placeNear, knownMe } from "./execute.js";
+import { execute, placeNear, knownMe, lookup } from "./execute.js";
+import { createToolsForm } from "./tools-form.js";
 import { createBarFx } from "./bar-fx.js";
 
 maplibregl.setWorkerUrl(workerUrl);
@@ -68,7 +69,13 @@ new ResizeObserver(() => {
 
 // ---- tools overlay
 
-const setTools = (open) => document.body.classList.toggle("tools-open", open);
+const setTools = (open) => {
+  document.body.classList.toggle("tools-open", open);
+  $("tools-open").setAttribute("aria-pressed", open);
+};
+$("tools-open").addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
+$("tools-close").addEventListener("click", () => setTools(false));
+addEventListener("keydown", (e) => e.key === "Escape" && setTools(false));
 const syncFeed = () => document.body.classList.toggle("has-feed", $("log").children.length > 0);
 
 // ---- turns: each message gets its own block above the bar; the last 3 stay (the same 3 Theo remembers),
@@ -384,57 +391,7 @@ const baseCtx = { log, chart, result, suggest, mapAction, selected: () => drawn.
 
 const ajv = new Ajv({ strict: false, allErrors: true });
 const validate = Object.fromEntries(TOOLS.map((t) => [t.name, ajv.compile(t.input_schema)]));
-const EXAMPLE = { map: { action: "style", style: "satellite" } };
-for (const g of golden) EXAMPLE[g.expect.tool] ??= g.expect.args;
-
-const kindOf = (s) => (s.type === "array" ? `array:${s.items.type}` : s.enum ? "enum" : s.type);
-
-function renderFields(values) {
-  const t = TOOLS.find((t) => t.name === $("tool").value);
-  $("desc").textContent = t.description;
-  const ex = values ?? EXAMPLE[t.name] ?? {};
-  $("fields").replaceChildren(...Object.entries(t.input_schema.properties).map(([key, s]) => {
-    const req = t.input_schema.required.includes(key);
-    const label = document.createElement("label");
-    label.innerHTML = `<span>${key}${req ? "" : " <i>optional</i>"}</span>`;
-    let input;
-    const v = ex[key];
-    switch (kindOf(s)) {
-      case "array:string":
-        input = document.createElement("textarea");
-        input.rows = Math.max(2, (v?.length ?? 0) + 1);
-        input.placeholder = "one place per line";
-        input.value = v?.join("\n") ?? "";
-        break;
-      case "enum":
-        input = document.createElement("select");
-        input.innerHTML = (req ? "" : `<option value=""></option>`) + s.enum.map((o) => `<option>${o}</option>`).join("");
-        input.value = v ?? (req ? s.enum[0] : "");
-        break;
-      default:
-        input = document.createElement("input");
-        if (s.type === "number") Object.assign(input, { type: "number", step: "any" });
-        if (kindOf(s) === "array:number") input.placeholder = "10, 20, 30";
-        input.value = Array.isArray(v) ? v.join(", ") : v ?? "";
-    }
-    input.name = key;
-    label.append(input);
-    return label;
-  }));
-}
-
-function readArgs(t) {
-  const args = {};
-  for (const [key, s] of Object.entries(t.input_schema.properties)) {
-    const raw = $("fields").elements[key].value.trim();
-    if (raw === "") continue;
-    const k = kindOf(s);
-    args[key] = k === "array:string" ? raw.split("\n").map((x) => x.trim()).filter(Boolean)
-      : k === "array:number" ? raw.split(/[,\s]+/).filter(Boolean).map(Number)
-      : s.type === "number" ? Number(raw) : raw;
-  }
-  return args;
-}
+const form = createToolsForm($("form"), { lookup });
 
 const clearFeed = () => {
   clearTimeout(settleTimer);
@@ -445,10 +402,9 @@ const clearFeed = () => {
 
 function run(e) {
   e.preventDefault();
-  const t = TOOLS.find((t) => t.name === $("tool").value);
   newTurn();
   setTools(false); // the overlay sits on the map
-  const call = { tool: t.name, args: readArgs(t) };
+  const call = form.read();
   pick("form", call);
   fx.state("thinking");
   runCall(call).then((out) => {
@@ -739,8 +695,7 @@ async function ask(e) {
       const fixes = repairPlaces(call, item.step ?? message);
       pick("Theo", call, ms, item.model ?? first.model);
       if (fixes.length) log("warn", "fixed", `model misspelled ${fixes.join(", ")}`);
-      $("tool").value = call.tool; // mirror into the form, so the call can be edited and rerun by hand
-      renderFields(call.args);
+      form.set(call.tool, call.args); // mirror into the form, so the call can be edited and rerun by hand
       const out = await runCall(call, stale, false);
       turn.calls.push({ ...call, result: out.result });
       drawnNow.push(...out.feats);
@@ -798,9 +753,7 @@ async function runCall(call, stale = () => false, fit = true) {
   }
 }
 
-$("tool").innerHTML = TOOLS.map((t) => `<option>${t.name}</option>`).join("");
-$("tool").value = "isochrone";
-$("tool").addEventListener("change", () => renderFields());
+form.set("isochrone");
 $("form").addEventListener("submit", run);
 $("chat").addEventListener("submit", ask);
 $("clear").addEventListener("click", () => {
@@ -810,7 +763,36 @@ $("clear").addEventListener("click", () => {
   refresh();
   clearFeed();
 });
-renderFields();
 
 // dev only: lets a test script drive the map (stripped from builds)
-if (import.meta.env.DEV) window.mbrt = { map, setBasemap, stopSpin, fx };
+if (import.meta.env.DEV) window.mbrt = { map, setBasemap, stopSpin, fx, form, validate };
+
+// dev only: localhost:5173/?demo=errors plays every error state with made-up failures; nothing is requested
+if (import.meta.env.DEV && new URLSearchParams(location.search).get("demo") === "errors") demoErrors();
+async function demoErrors() {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const cases = [
+    ["route from Paris to Lyon", { kind: "limit", retryAfter: 8, message: "Groq free tier limit reached, try again in 8 s" }, true],
+    ["pins on Qwxzzyq Vlorpton", { kind: "nomatch", place: "Qwxzzyq Vlorpton", message: 'Photon: no match for "Qwxzzyq Vlorpton"' }],
+    ["30 min drive from Shibuya", { kind: "network", message: "valhalla1.openstreetmap.de: TimeoutError", raw: "valhalla1.openstreetmap.de: TimeoutError signal timed out" }, true],
+    ["make it purple", { kind: "model", message: "the model answered without picking a tool" }],
+    ["route from Lisbon to Tokyo", { kind: "route", message: "No road connects these places", raw: "routing.openstreetmap.de 400 NoRoute" }, true],
+    ["anything at all", { kind: "config", message: "GROQ_API_KEY is not set on the server" }],
+  ];
+  await wait(1500);
+  for (const [msg, e, afterThinking] of cases) {
+    $("msg").value = msg;
+    newTurn();
+    headline(msg);
+    if (afterThinking) {
+      thinking(true);
+      await wait(2200);
+      thinking(false);
+    }
+    fx.state("error");
+    shake();
+    fail(Object.assign(new Error(e.message), e), { message: msg, again: () => {} });
+    await wait(e.kind === "limit" ? 9500 : 4500);
+  }
+  $("msg").value = "";
+}
