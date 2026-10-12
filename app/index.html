@@ -2,59 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>mbrt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>mbrt · chat to a map</title>
+  <link id="favicon" rel="icon" type="image/svg+xml" href="">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Share+Tech+Mono&family=Quantico:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quantico:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
       color-scheme: dark;
-      --ground: #121518; --panel: #171B20; --panel2: #1D2126; --hair: #292F36;
-      --ink: #E1E2E4; --ink2: #9199A4; --muted: #5D6673;
-      --white: #F1F2F3; --soft: #BEC2C7; --link: #26A0D6;
-      --good: #5fae6b; --warn: #B8860B; --bad: #B8564A;
-      --serif: "Fraunces", Georgia, serif; --mono: "Share Tech Mono", ui-monospace, monospace;
+      --ink: #E9EBED; --ink2: rgba(233, 235, 237, 0.62); --muted: rgba(233, 235, 237, 0.38);
+      --hair: rgba(255, 255, 255, 0.084); --glass: rgba(10, 12, 15, 0.55); --field: rgba(255, 255, 255, 0.05);
+      --cyan: #089bdf; --good: #5fae6b; --warn: #B8860B; --bad: #B8564A;
+      --font: "Quantico", ui-monospace, monospace;
+      --bar-h: 150px;
     }
     * { box-sizing: border-box; border-radius: 0; }
-    html, body { margin: 0; height: 100%; background: var(--ground); color: var(--ink); font: 14px/1.4 var(--serif); font-variation-settings: "opsz" 14; }
-    #map { position: fixed; inset: 0 0 0 330px; }
-    #panel { position: fixed; inset: 0 auto 0 0; width: 330px; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--hair); padding: 14px 14px 20px; }
-    h1 { margin: 0; font-size: 26px; font-variation-settings: "opsz" 120; font-weight: 700; letter-spacing: -0.01em; }
-    .sub, label > span, #log b, dt { font-size: 10px; font-variation-settings: "opsz" 9; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink2); }
-    .sub { display: block; margin: 2px 0 14px; }
-    #desc { color: var(--ink2); margin: 6px 0 10px; font-size: 13px; }
+    html, body { margin: 0; height: 100%; background: #0b0d10; color: var(--ink); font: 13px/1.4 var(--font); }
+    #map { position: fixed; inset: 0; }
+    .glass { background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--hair); }
+    .cap, label > span, #log b, dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink2); }
+
+    /* top-left wordmark and the tools toggle, top-center layout switch */
+    #top { position: fixed; top: 12px; left: 12px; z-index: 3; display: flex; gap: 6px; align-items: stretch; }
+    .mark { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.04em; padding: 5px 10px; }
+    #top button, #layouts button { font: 700 10px var(--font); text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); cursor: pointer; padding: 0 12px; }
+    #top button[aria-pressed="true"] { color: var(--cyan); }
+    #layouts { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; }
+    #layouts button { height: 28px; border-right-width: 0; }
+    #layouts button:last-child { border-right-width: 1px; }
+    #layouts button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.14); }
+
+    /* panel contents, shared by all layouts */
+    #panel { z-index: 2; }
+    #tools, #feed { padding: 12px; }
+    #desc { color: var(--ink2); margin: 6px 0 10px; }
     label { display: block; margin-bottom: 8px; }
     label > span { display: block; margin-bottom: 3px; }
     label i { color: var(--muted); font-style: normal; }
-    input, select, textarea, button { width: 100%; font: 13px/1.3 var(--mono); letter-spacing: -0.03em; color: var(--ink); background: var(--panel2); border: 1px solid var(--hair); padding: 6px 7px; }
+    input, select, textarea, button { font: 13px/1.3 var(--font); color: var(--ink); background: var(--field); border: 1px solid var(--hair); }
+    #tools input, #tools select, #tools textarea { width: 100%; padding: 6px 7px; }
+    select option { background: #15181c; }
     textarea { resize: vertical; }
-    input:focus, select:focus, textarea:focus { outline: 1px solid var(--link); outline-offset: -1px; }
-    .row { display: flex; gap: 6px; margin: 4px 0 10px; }
-    button { cursor: pointer; font-family: var(--serif); font-variation-settings: "opsz" 9; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; padding: 8px; }
-    #run { background: var(--white); color: var(--ground); border-color: var(--white); }
+    #tools input:focus, #tools select:focus, #tools textarea:focus { outline: 1px solid var(--cyan); outline-offset: -1px; }
+    .row { display: flex; gap: 6px; margin-top: 4px; }
+    .row button { flex: 1; cursor: pointer; padding: 8px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; }
+    #run { background: var(--ink); color: #0b0d10; border-color: var(--ink); }
     #run:disabled { opacity: 0.5; cursor: wait; }
-    #clear { width: 40%; }
-    #call { margin: 0 0 8px; padding: 6px 7px; background: var(--ground); border: 1px solid var(--hair); font: 12px/1.35 var(--mono); letter-spacing: -0.04em; color: var(--soft); white-space: pre-wrap; word-break: break-word; }
+    #call { margin: 0 0 8px; font: 12px/1.35 var(--font); color: var(--muted); white-space: pre-wrap; word-break: break-word; }
     #call:empty { display: none; }
-    #chart { margin-bottom: 8px; border: 1px solid var(--hair); background: var(--ground); }
-    #chart svg { display: block; width: 100%; height: 90px; }
-    #chart polygon { fill: rgba(190, 194, 199, 0.12); }
-    #chart polyline { fill: none; stroke: var(--white); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    #chart { margin-bottom: 8px; border: 1px solid var(--hair); }
+    #chart svg { display: block; width: 100%; height: 80px; }
+    #chart polygon { fill: rgba(255, 255, 255, 0.1); }
+    #chart polyline { fill: none; stroke: var(--ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
     #chart dl { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 6px 7px; border-top: 1px solid var(--hair); }
-    #chart dd { margin: 0; font: 13px var(--mono); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+    #chart dd { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
     #chart dt { grid-row: 1; }
     #log { list-style: none; margin: 0; padding: 0; }
-    #log li { padding: 5px 7px; border-left: 2px solid var(--muted); margin-bottom: 3px; background: var(--panel2); font-size: 12.5px; }
+    #log li { padding: 4px 8px; border-left: 2px solid var(--muted); margin-bottom: 3px; background: rgba(255, 255, 255, 0.03); }
     #log li.ok { border-color: var(--good); }
     #log li.warn { border-color: var(--warn); background: rgba(184, 134, 11, 0.14); }
-    #log li.bad { border-color: var(--bad); background: rgba(184, 86, 74, 0.15); }
+    #log li.bad { border-color: var(--bad); background: rgba(184, 86, 74, 0.16); }
     #log b { display: block; }
-    #log span { font-family: var(--mono); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
-    .maplibregl-ctrl-attrib { font-size: 10px; }
+    #log span { font-variant-numeric: tabular-nums; }
+
+    /* A: one frosted card, tools and steps together */
+    .layout-a #tools-toggle { display: none; }
+    .layout-a #panel { position: fixed; top: 52px; left: 12px; width: 320px; max-height: calc(100vh - var(--bar-h) - 64px); overflow-y: auto; }
+    .layout-a #tools, .layout-a #feed { background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .layout-a #feed { border-top: 1px solid var(--hair); }
+    .layout-b #panel, .layout-c #panel { background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .layout-a:not(.has-feed) #feed { display: none; }
+
+    /* B: chat only; steps stack above the bar, tools in a drawer */
+    .layout-b #panel, .layout-c #panel { display: contents; }
+    .layout-b #tools { position: fixed; top: 52px; left: 12px; width: 320px; max-height: calc(100vh - var(--bar-h) - 64px); overflow-y: auto; z-index: 2; }
+    .layout-b #feed { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + 12px); width: min(560px, 92vw); max-height: 34vh; overflow-y: auto; z-index: 2; }
+    .layout-b:not(.tools-open) #tools, .layout-c:not(.tools-open) #tools { display: none; }
+    .layout-b:not(.has-feed) #feed, .layout-c:not(.has-feed) #feed { display: none; }
+
+    /* C: steps written straight onto the map, tools as an overlay */
+    .layout-c #tools { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(360px, 92vw); max-height: 70vh; overflow-y: auto; z-index: 4; }
+    .layout-c #feed { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + 6px); width: min(720px, 92vw); max-height: 40vh; overflow-y: auto;
+      z-index: 2; background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; text-align: center;
+      text-shadow: 0 1px 2px #000, 0 0 10px #000, 0 0 18px rgba(0, 0, 0, 0.8); }
+    .layout-c #log li { border: 0; background: none; padding: 1px 0; margin: 0; }
+    .layout-c #log b { display: inline; margin-right: 8px; }
+    .layout-c #log li.ok b { color: var(--good); }
+    .layout-c #log li.warn b { color: var(--warn); }
+    .layout-c #log li.bad b { color: var(--bad); }
+    .layout-c #chart { background: var(--glass); text-shadow: none; }
+
     /* the chat bar, carried over from the first mbrt: frosted, big, centered, an orb while thinking */
-    #chat { position: fixed; left: 330px; right: 0; bottom: 0; z-index: 2; padding: 6vh 1vh calc(6vh + env(safe-area-inset-bottom));
-      background: rgba(0, 0, 0, 0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.084); }
+    #chat { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; padding: 6vh 1vh calc(6vh + env(safe-area-inset-bottom));
+      background: rgba(0, 0, 0, 0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--hair); }
     #chat .field { position: relative; }
     #chat .field::before { content: ""; position: absolute; top: 50%; left: 50%; width: 120%; height: 150%; transform: translate(-50%, -50%);
       background: radial-gradient(circle, rgba(8, 155, 223, 0.2) 0%, rgba(8, 155, 223, 0) 70%); border-radius: 50%; filter: blur(20px);
@@ -68,37 +109,55 @@
       80% { transform: translate(-50%, -50%) translate(-2px, -2px) scale(0.98); filter: blur(19px); }
       100% { transform: translate(-50%, -50%) translate(0, 0) scale(1); filter: blur(20px); }
     }
-    #msg { width: 100%; padding: 0; font: 700 30px "Quantico", monospace; letter-spacing: normal; text-transform: uppercase; text-align: center;
+    #msg { width: 100%; padding: 0; font: 700 30px var(--font); text-transform: uppercase; text-align: center;
       color: white; background: transparent; border: 0; outline: none; transition: color 0.3s; }
     #msg::placeholder { color: rgba(255, 255, 255, 0.6); opacity: 0.5; }
     #msg:focus::placeholder, #msg:not(:placeholder-shown)::placeholder { opacity: 0; }
     #msg.thinking, #msg.thinking::placeholder { color: #089bdf7e; opacity: 1; }
     #cancel-notice { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
-      font: 400 10px "Quantico", monospace; text-transform: uppercase; color: rgba(255, 255, 255, 0.4); opacity: 0; transition: opacity 0.3s ease; }
+      font-size: 10px; text-transform: uppercase; color: rgba(255, 255, 255, 0.4); opacity: 0; transition: opacity 0.3s ease; }
     #cancel-notice.visible { opacity: 1; }
+
+    /* credits: OSM always visible, the rest folded into the (i) */
+    #credit { position: fixed; right: 40px; bottom: calc(var(--bar-h) + 12px); z-index: 1; font-size: 9px; color: var(--ink2); text-shadow: 0 0 4px #000; }
+    #credit a { color: inherit; }
+    .maplibregl-ctrl-bottom-right { bottom: calc(var(--bar-h) + 4px); }
+    .maplibregl-ctrl.maplibregl-ctrl-attrib { background: var(--glass); backdrop-filter: blur(20px); font: 9px/1.5 var(--font); color: var(--ink2); }
+    .maplibregl-ctrl-attrib a { color: var(--ink); }
+    .maplibregl-ctrl-attrib-button { filter: invert(1); }
+    .maplibregl-ctrl-group { background: var(--glass); border-radius: 0; }
+    .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1); }
+    .maplibregl-ctrl-top-right { top: 52px; }
+
     @media (max-width: 700px) {
-      #map { inset: 0 0 40vh 0; }
-      #panel { inset: auto 0 0 0; width: 100%; height: 40vh; border-right: 0; border-top: 1px solid var(--hair); padding: 12px 16px 16px; }
-      #chat { left: 0; bottom: 40vh; padding: 3vh 16px; }
+      #chat { padding: 3vh 16px calc(3vh + env(safe-area-inset-bottom)); }
       #msg { font-size: 20px; }
+      .layout-a #panel, .layout-b #tools { left: 8px; right: 8px; width: auto; max-height: 38vh; }
+      #layouts { left: auto; right: 12px; transform: none; }
+      .maplibregl-ctrl-top-right { top: 48px; }
     }
   </style>
 </head>
-<body>
-  <aside id="panel">
-    <h1>mbrt</h1>
-    <span class="sub">chat to a map · gpt-oss-120b on Groq · or pick a tool by hand</span>
-    <form id="form" autocomplete="off">
-      <label><span>tool</span><select id="tool"></select></label>
-      <p id="desc"></p>
-      <fieldset id="fields" style="border:0;margin:0;padding:0"></fieldset>
-      <div class="row"><button id="run" type="submit">Run</button><button id="clear" type="button">Clear</button></div>
-    </form>
-    <pre id="call"></pre>
-    <div id="chart" hidden></div>
-    <ol id="log"></ol>
-  </aside>
+<body class="layout-b">
   <div id="map"></div>
+  <header id="top"><span class="mark glass">mbrt</span><button id="tools-toggle" class="glass" type="button" aria-pressed="false">tools</button></header>
+  <nav id="layouts" aria-label="layout"><button class="glass" data-l="a">A</button><button class="glass" data-l="b">B</button><button class="glass" data-l="c">C</button></nav>
+  <aside id="panel" class="glass">
+    <section id="tools" class="glass">
+      <form id="form" autocomplete="off">
+        <label><span>tool</span><select id="tool"></select></label>
+        <p id="desc"></p>
+        <fieldset id="fields" style="border:0;margin:0;padding:0"></fieldset>
+        <div class="row"><button id="run" type="submit">Run</button><button id="clear" type="button">Clear</button></div>
+      </form>
+    </section>
+    <section id="feed" class="glass">
+      <pre id="call"></pre>
+      <div id="chart" hidden></div>
+      <ol id="log"></ol>
+    </section>
+  </aside>
+  <div id="credit">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>
   <form id="chat" autocomplete="off">
     <div class="field">
       <span id="cancel-notice">sending this will cancel the current request</span>

@@ -44,8 +44,45 @@ const map = new maplibregl.Map({
   zoom: 4,
   attributionControl: false,
 });
-// top-left, because the chat bar covers the bottom edge
-map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "Search: Photon by komoot · Routing: Valhalla by FOSSGIS · Boundaries: Nominatim" }), "top-left");
+// folded into the (i) above the bar; "© OpenStreetMap" stays visible on its own (index.html #credit)
+map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "Search: Photon by komoot · Routing: Valhalla by FOSSGIS · Boundaries: Nominatim" }), "bottom-right");
+map.once("load", () => document.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));
+new ResizeObserver(() => document.documentElement.style.setProperty("--bar-h", `${$("chat").offsetHeight}px`)).observe($("chat"));
+
+// ---- layout A / B / C, picked with ?layout= or the switch, remembered per browser
+
+function setLayout(l) {
+  document.body.classList.remove("layout-a", "layout-b", "layout-c");
+  document.body.classList.add(`layout-${l}`);
+  for (const b of document.querySelectorAll("#layouts button")) b.setAttribute("aria-pressed", b.dataset.l === l);
+  try { localStorage.setItem("mbrt-layout", l); } catch {}
+}
+let savedLayout = null;
+try { savedLayout = localStorage.getItem("mbrt-layout"); } catch {}
+setLayout(new URLSearchParams(location.search).get("layout") ?? savedLayout ?? "b");
+for (const b of document.querySelectorAll("#layouts button")) b.addEventListener("click", () => setLayout(b.dataset.l));
+const setTools = (open) => {
+  document.body.classList.toggle("tools-open", open);
+  $("tools-toggle").setAttribute("aria-pressed", open);
+};
+$("tools-toggle").addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
+const syncFeed = () => document.body.classList.toggle("has-feed", $("log").children.length > 0 || $("call").textContent !== "");
+
+// ---- tab: title says what is happening, the orb favicon brightens while thinking
+
+const orb = (core, glow) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><radialGradient id="g"><stop offset="0" stop-color="${core}"/><stop offset=".5" stop-color="#089bdf" stop-opacity="${glow}"/><stop offset="1" stop-color="#089bdf" stop-opacity="0"/></radialGradient></defs><rect width="32" height="32" fill="#0b0d10"/><circle cx="16" cy="16" r="15" fill="url(#g)"/></svg>`)}`;
+const ORB_DIM = orb("#4fb8ea", 0.55), ORB_BRIGHT = orb("#c9ecff", 0.95);
+$("favicon").href = ORB_DIM;
+let pulse = null;
+function tabState(state, text = "") {
+  clearInterval(pulse);
+  $("favicon").href = ORB_DIM;
+  if (state === "thinking") {
+    document.title = "Thinking… · mbrt";
+    let on = false;
+    pulse = setInterval(() => ($("favicon").href = (on = !on) ? ORB_BRIGHT : ORB_DIM), 600);
+  } else document.title = text ? `${state === "error" ? "! " : ""}${text} · mbrt` : "mbrt · chat to a map";
+}
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
 // ---- drawn features: one GeoJSON source, styled by `kind`
@@ -163,6 +200,8 @@ function log(status, source, text) {
   li.querySelector("b").textContent = source;
   li.querySelector("span").textContent = text;
   $("log").append(li);
+  li.scrollIntoView({ block: "nearest" });
+  syncFeed();
 }
 
 function chart(profile) {
@@ -240,12 +279,14 @@ const resetOutput = () => {
   $("log").replaceChildren();
   $("chart").hidden = true;
   $("call").textContent = "";
+  syncFeed();
 };
 
 function run(e) {
   e.preventDefault();
   const t = TOOLS.find((t) => t.name === $("tool").value);
   resetOutput();
+  if (document.body.classList.contains("layout-c")) setTools(false); // the overlay sits on the map
   runCall({ tool: t.name, args: readArgs(t) });
 }
 
@@ -253,6 +294,7 @@ function run(e) {
 // A new message cancels the one in flight, and anything the old one still produces is dropped.
 let inflight = null;
 const thinking = (on) => {
+  if (on) tabState("thinking");
   $("msg").classList.toggle("thinking", on);
   $("msg").closest(".field").classList.toggle("thinking", on);
   $("msg").placeholder = on ? "Thinking..." : "Ask the map anything";
@@ -267,6 +309,7 @@ async function ask(e) {
   inflight?.abort();
   const ctrl = (inflight = new AbortController());
   const stale = () => ctrl !== inflight;
+  let failed = false;
   $("msg").value = "";
   $("cancel-notice").classList.remove("visible");
   thinking(true);
@@ -280,13 +323,14 @@ async function ask(e) {
     log("ok", "Groq", `${body.model} chose ${body.call.tool} in ${body.ms} ms`);
     $("tool").value = body.call.tool; // mirror into the form, so the call can be edited and rerun by hand
     renderFields(body.call.args);
-    await runCall(body.call, stale);
+    failed = !(await runCall(body.call, stale));
   } catch (err) {
-    if (!stale()) log("bad", "error", err.message);
+    if (!stale()) log("bad", "error", err.message), (failed = true);
   } finally {
     if (!stale()) {
       inflight = null;
       thinking(false);
+      tabState(failed ? "error" : "done", message);
     }
   }
 }
@@ -294,15 +338,16 @@ async function ask(e) {
 async function runCall(call, stale = () => false) {
   const ctx = { ...baseCtx, log: (...a) => stale() || log(...a), chart: (p) => stale() || chart(p) };
   $("call").textContent = JSON.stringify(call);
+  syncFeed();
   if (!validate[call.tool]?.(call.args)) {
-    log("bad", "schema", validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`);
-    return;
+    ctx.log("bad", "schema", validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`);
+    return false;
   }
   $("run").disabled = true;
   const t0 = performance.now();
   try {
     const feats = await execute(call, ctx);
-    if (stale()) return;
+    if (stale()) return false;
     for (const f of feats) f.properties.fid = nextFid++;
     drawn.push(...feats);
     refresh();
@@ -312,8 +357,10 @@ async function runCall(call, stale = () => false) {
       else map.fitBounds([w, s, e2, n], { padding: { top: 60, left: 60, right: 60, bottom: $("chat").offsetHeight + 40 }, maxZoom: 14 });
     }
     log("ok", "done", `${feats.length} features in ${Math.round(performance.now() - t0)} ms`);
+    return true;
   } catch (err) {
-    log("bad", "error", err.message);
+    ctx.log("bad", "error", err.message);
+    return false;
   } finally {
     $("run").disabled = false;
   }
