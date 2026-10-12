@@ -39,7 +39,7 @@ const DEM = {
 const $ = (id) => document.getElementById(id);
 const map = new maplibregl.Map({
   container: "map",
-  style: STYLES.dark,
+  style: STYLES.satellite,
   center: [78.9, 22.5],
   zoom: 4,
   attributionControl: false,
