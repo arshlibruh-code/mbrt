@@ -157,7 +157,7 @@ async function chat(req, res) {
   if (r.status === 429) return json(res, 429, { error: "ChatGPT plan limit reached", kind: "limit", retryAfter: Math.ceil(Number(r.headers.get("retry-after")) || 60) });
   if (r.status === 401 || r.status === 403) return json(res, r.status, { error: "ChatGPT refused the sign-in, sign in again", kind: "key" });
   if (!r.ok) return json(res, 502, { error: `ChatGPT ${r.status}: ${text.slice(0, 300)}`, kind: "network" });
-  json(res, 200, { calls: responsesCalls(text), model, ms: Date.now() - t0 });
+  json(res, 200, { ...responsesCalls(text), model, ms: Date.now() - t0 });
 }
 
 // mounted at /api/chatgpt by vite.config.js

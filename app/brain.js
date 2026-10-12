@@ -1,7 +1,7 @@
 // Theo's brain: the shared one on our server, or the visitor's own. Their own key goes straight from this browser
 // to the provider (each one allows it), never through our server; it stays in this browser until "forget".
 import { chatMessages } from "../eval/tools.js";
-import { openaiBody, openaiCalls, anthropicBody, anthropicCalls } from "./llm.js";
+import { openaiBody, openaiCalls, openaiUsage, anthropicBody, anthropicCalls, anthropicUsage } from "./llm.js";
 
 // prefix -> provider, checked in order (sk- last: it is the start of three others)
 const PROVIDERS = {
@@ -112,6 +112,31 @@ export async function chatgptModels() {
   return { list: body.models, pick: [/luna/, /mini/].map((re) => body.models.find((m) => re.test(m.id))).find(Boolean)?.id ?? body.models[0]?.id };
 }
 
+// ---- usage: a tally per brain for this browser session, and what OpenRouter says the account has spent
+
+const brainId = () => (state.use === "key" ? `key:${state.key?.provider}` : state.use);
+let tallies = (() => {
+  try { return JSON.parse(sessionStorage.getItem("mbrt:tally")) ?? {}; } catch { return {}; }
+})();
+const listeners = new Set();
+export const onTally = (fn) => (listeners.add(fn), fn(tally()));
+export const tally = () => tallies[brainId()] ?? { requests: 0, in: 0, out: 0, cost: null };
+function count(usage) {
+  const t = tally();
+  tallies[brainId()] = { requests: t.requests + 1, in: t.in + (usage?.in ?? 0), out: t.out + (usage?.out ?? 0), cost: usage?.cost != null ? (t.cost ?? 0) + usage.cost : t.cost };
+  try { sessionStorage.setItem("mbrt:tally", JSON.stringify(tallies)); } catch {}
+  listeners.forEach((fn) => fn(tally()));
+}
+export const tokens = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`);
+export const usd = (n) => `$${n < 0.01 ? n.toFixed(5) : n.toFixed(2)}`;
+export const usageText = (u) => (u ? `${u.in.toLocaleString("en-IN")} in · ${u.out.toLocaleString("en-IN")} out${u.cost != null ? ` · ${usd(u.cost)}` : ""}` : "");
+
+// OpenRouter's own numbers for the key: spent today, all time, and what is left under its limit
+export async function openrouterSpend(key) {
+  const { data } = await reply(await send("https://openrouter.ai/api/v1/key", { headers: headers("openrouter", key) }), "OpenRouter");
+  return { today: data.usage_daily, total: data.usage, left: data.limit_remaining };
+}
+
 // who is answering, for the feed
 export function label() {
   const short = (m) => (m ?? "").split("/").pop();
@@ -129,6 +154,7 @@ export async function ask({ message, history, context, signal }) {
       body: JSON.stringify({ message, history, context, model: state.chatgpt?.model }) });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw fail(body.error, body.kind ?? "network", { retryAfter: body.retryAfter, who: "ChatGPT" });
+    count(body.usage);
     return { ...body, by: "ChatGPT" };
   }
   const own = state.use === "openrouter" ? { provider: "openrouter", ...state.openrouter } : state.use === "key" ? state.key : null;
@@ -136,6 +162,7 @@ export async function ask({ message, history, context, signal }) {
     const res = await send("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, signal, body: JSON.stringify({ message, history, context }) });
     const body = await res.json().catch(() => ({ error: `server ${res.status}` }));
     if (!res.ok) throw fail(body.error, body.kind ?? (res.status >= 500 ? "network" : "model"), { retryAfter: body.retryAfter });
+    count(body.usage);
     return { ...body, by: "Groq" };
   }
   const p = PROVIDERS[own.provider];
@@ -145,5 +172,7 @@ export async function ask({ message, history, context, signal }) {
     method: "POST", headers: headers(own.provider, own.key), signal,
     body: JSON.stringify(anthropic ? anthropicBody(own.model, messages) : openaiBody(own.model, messages, { parallel: p.parallel !== false })),
   }), p.name);
-  return { calls: anthropic ? anthropicCalls(body) : openaiCalls(body), model: own.model, ms: Date.now() - t0, by: p.name };
+  const usage = anthropic ? anthropicUsage(body) : openaiUsage(body);
+  count(usage);
+  return { calls: anthropic ? anthropicCalls(body) : openaiCalls(body), usage, model: own.model, ms: Date.now() - t0, by: p.name };
 }

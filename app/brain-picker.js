@@ -7,11 +7,23 @@ const price = (m) => (Number.isFinite(m.price) ? (m.price === 0 ? "  free" : `  
 
 export function createBrainPicker(root, { onChange }) {
   let open = brain.get().use;
-  root.innerHTML = `<div class="seg"></div><div class="brain-pane"></div>`;
-  const seg = root.querySelector(".seg"), pane = root.querySelector(".brain-pane");
+  root.innerHTML = `<div class="seg"></div><div class="brain-pane"></div><div class="tally"></div>`;
+  const seg = root.querySelector(".seg"), pane = root.querySelector(".brain-pane"), tallyEl = root.querySelector(".tally");
+  // this session's use of the brain in use, updated after every answer
+  const showTally = (t = brain.tally()) =>
+    (tallyEl.innerHTML = `<span>this session</span><b>${t.requests}</b> request${t.requests === 1 ? "" : "s"} · <b>${brain.tokens(t.in + t.out)}</b> tokens${t.cost != null ? ` · <b>${brain.usd(t.cost)}</b>` : ""}`);
+  brain.onTally(showTally);
+  const spend = async (key) => {
+    const line = note("checking spend...");
+    brain.openrouterSpend(key).then((s) => {
+      line.innerHTML = `account: <b>${brain.usd(s.today)}</b> today · <b>${brain.usd(s.total)}</b> all time · ${s.left == null ? "no limit on this key" : `<b>${brain.usd(s.left)}</b> left`}`;
+    }).catch((err) => (line.textContent = `spend unavailable: ${err.message}`));
+    return line;
+  };
 
   const sync = () => {
     onChange(brain.label().replace(/^Theo$/, "Theo · shared · gpt-oss-120b"));
+    showTally();
     for (const b of seg.children) b.setAttribute("aria-pressed", b.dataset.value === open);
   };
   const use = (v) => (brain.set({ use: v }), sync());
@@ -52,7 +64,7 @@ export function createBrainPicker(root, { onChange }) {
       try {
         const { list } = await brain.models("openrouter", st.openrouter.key);
         status.replaceWith(chooser(list, st.openrouter.model, (model) => (brain.set({ openrouter: { ...brain.get().openrouter, model } }), sync())),
-          note(`✓ signed in, ${list.length} models that can call tools`, "ok"));
+          note(`✓ signed in, ${list.length} models that can call tools, cheapest first`, "ok"), await spend(st.openrouter.key));
       } catch (err) {
         status.textContent = `✗ ${err.message}`;
         status.className = "found bad";
@@ -80,6 +92,7 @@ export function createBrainPicker(root, { onChange }) {
           status.textContent = `✓ ${brain.nameOf(provider)} key works, ${list.length} models`;
           status.className = "found ok";
           slot.append(chooser(list, model, (m) => (brain.set({ key: { ...brain.get().key, model: m } }), sync())),
+            provider === "openrouter" ? await spend(key) : note(`${brain.nameOf(provider)} doesn't share spend with browser apps; tokens are counted below, money is on your ${brain.nameOf(provider)} dashboard.`),
             button("forget key", () => (brain.set({ use: "shared", key: null }), (open = "shared"), render())));
         } catch (err) {
           status.textContent = `✗ ${err.message}`;
@@ -106,7 +119,8 @@ export function createBrainPicker(root, { onChange }) {
         const model = brain.get().chatgpt?.model ?? pick;
         brain.set({ chatgpt: { model } });
         use("chatgpt");
-        pane.append(chooser(list, model, (m) => (brain.set({ chatgpt: { model: m } }), sync())), note(`✓ signed in${s.email ? ` as ${s.email}` : ""}`, "ok"));
+        pane.append(chooser(list, model, (m) => (brain.set({ chatgpt: { model: m } }), sync())), note(`✓ signed in${s.email ? ` as ${s.email}` : ""}`, "ok"),
+          note(`This spends your plan's allowance, not money. OpenAI doesn't tell apps how much is left, so check your limits in <a href="https://chatgpt.com" target="_blank" rel="noopener">ChatGPT's settings</a>. The light tier (luna) spends the least.`));
       } catch (err) {
         pane.append(note(`✗ ${err.message}`, "bad"));
       }

@@ -17,6 +17,8 @@ const openaiTools = TOOLS.map((t) => ({ type: "function", function: { name: t.na
 export const openaiBody = (model, messages, { parallel = true } = {}) => ({
   model, temperature: 0, tool_choice: "required", tools: openaiTools, messages, ...(parallel && { parallel_tool_calls: true }),
 });
+// tokens in and out, plus the cost when the provider says it (OpenRouter does, on every response)
+export const openaiUsage = (body) => ({ in: body?.usage?.prompt_tokens ?? 0, out: body?.usage?.completion_tokens ?? 0, ...(body?.usage?.cost != null && { cost: body.usage.cost }) });
 export const openaiCalls = (body) =>
   done((body?.choices?.[0]?.message?.tool_calls ?? []).map((tc) => ({ tool: tc.function.name, args: parseArgs(tc.function.arguments) })));
 
@@ -38,6 +40,7 @@ export function anthropicBody(model, messages) {
     tools: TOOLS.map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema })), tool_choice: { type: "any" },
   };
 }
+export const anthropicUsage = (body) => ({ in: body?.usage?.input_tokens ?? 0, out: body?.usage?.output_tokens ?? 0 });
 export const anthropicCalls = (body) => done((body?.content ?? []).filter((c) => c.type === "tool_use").map((c) => ({ tool: c.name, args: c.input })));
 
 // OpenAI Responses for a ChatGPT sign-in: no system items and no temperature, function tools grouped in a namespace,
@@ -54,18 +57,18 @@ export function responsesBody(model, messages) {
     tools: [{ type: "namespace", name: "mbrt", description: "Map tools", tools: TOOLS.map((t) => ({ type: "function", name: t.name, description: t.description, parameters: t.input_schema })) }],
   };
 }
-// a server-sent event stream, read whole. The finished response arrives with an empty output on this route,
-// so the function calls are taken from each finished output item.
+// a server-sent event stream, read whole -> {calls, usage}. The finished response arrives with an empty output
+// on this route, so the function calls are taken from each finished output item.
 export function responsesCalls(sse) {
-  let completed = false;
+  let completed = null;
   const calls = [];
   for (const line of sse.split("\n")) {
     if (!line.startsWith("data:")) continue;
     const ev = (() => { try { return JSON.parse(line.slice(5)); } catch { return null; } })();
     if (ev?.type === "response.failed" || ev?.type === "error") throw modelError(ev.response?.error?.message ?? ev.message ?? "the response failed");
     if (ev?.type === "response.output_item.done" && ev.item.type === "function_call") calls.push({ tool: ev.item.name, args: parseArgs(ev.item.arguments) });
-    if (ev?.type === "response.completed") completed = true;
+    if (ev?.type === "response.completed") completed = ev.response;
   }
   if (!completed) throw modelError("the stream ended before the response completed");
-  return done(calls);
+  return { calls: done(calls), usage: { in: completed.usage?.input_tokens ?? 0, out: completed.usage?.output_tokens ?? 0 } };
 }

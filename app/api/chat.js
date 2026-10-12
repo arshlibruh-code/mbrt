@@ -1,7 +1,7 @@
 // POST {message, history, context} -> {calls: [{tool, args}]}. Runs server-side (Vite middleware locally, Pages Function
 // when deployed) so GROQ_API_KEY never reaches the browser. The model only picks the call.
 import { TOOLS, MAX_CALLS, chatMessages } from "../../eval/tools.js";
-import { openaiBody, openaiCalls } from "../llm.js";
+import { openaiBody, openaiCalls, openaiUsage } from "../llm.js";
 
 const MODEL = "openai/gpt-oss-120b";
 const NAMES = new Set(TOOLS.map((t) => t.name));
@@ -51,7 +51,7 @@ export async function handleChat(request, env) {
   }
   if (!res.ok) return json(502, { error: `Groq ${res.status}: ${body?.error?.message ?? "no details"}`, kind: "network" });
   try {
-    return json(200, { calls: openaiCalls(body), model: MODEL, ms: Date.now() - t0 });
+    return json(200, { calls: openaiCalls(body), usage: openaiUsage(body), model: MODEL, ms: Date.now() - t0 });
   } catch (err) {
     return json(502, { error: err.message, kind: "model" });
   }

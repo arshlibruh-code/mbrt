@@ -462,9 +462,9 @@ function describe({ tool, args: a }) {
   return tool;
 }
 // the pick in words; clicking it unfolds the exact JSON
-function pick(source, call, ms, model, by = "Groq") {
+function pick(source, call, ms, model, by = "Groq", usage) {
   const li = line("pick", source, `${describe(call)}${ms ? `   ${ms} ms` : ""}`);
-  const json = line("json", "", `${JSON.stringify(call)}${model ? `   ${model} on ${by}` : ""}`);
+  const json = line("json", "", `${JSON.stringify(call)}${model ? `   ${model} on ${by}` : ""}${usage ? ` · ${brain.usageText(usage)}` : ""}`);
   li.addEventListener("click", () => json.classList.toggle("open"));
 }
 
@@ -779,7 +779,7 @@ async function ask(e) {
     let todo = [{ call: head, ms: first.ms }];
     if (head.tool === "plan") {
       // one step at a time: each step is its own small request, so one-call models can still do several things
-      pick(brain.label(), head, first.ms, first.model, first.by);
+      pick(brain.label(), head, first.ms, first.model, first.by, first.usage);
       turn.calls.push({ ...head, result: `${head.args.steps.length} steps` });
       todo = head.args.steps.slice(0, 5).map((step) => ({ step }));
     }
@@ -793,11 +793,12 @@ async function ask(e) {
         ({ ms } = r);
         item.model = r.model;
         item.by = r.by;
+        item.usage = r.usage;
         call = r.calls[0];
         if (call.tool === "plan") throw new Error(`step ${i + 1} came back as another plan`);
       }
       const fixes = repairPlaces(call, item.step ?? message);
-      pick(brain.label(), call, ms, item.model ?? first.model, item.by ?? first.by);
+      pick(brain.label(), call, ms, item.model ?? first.model, item.by ?? first.by, item.step ? item.usage : first.usage);
       if (fixes.length) log("warn", "fixed", `model misspelled ${fixes.join(", ")}`);
       form.set(call.tool, call.args, "Theo"); // mirror into the form, so the call can be edited and rerun by hand
       const out = await runCall(call, stale, false, "Theo");
