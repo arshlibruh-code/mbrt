@@ -394,27 +394,58 @@ $("m-locate").addEventListener("click", () => runCall({ tool: "markers", args: {
 
 // ---- the feed: your message, the pick in plain words, the steps, one result line
 
-function line(cls, label, text, raw) {
+// one centered column per turn: your message, Theo's one line, the result. Theo's line says what it is doing,
+// then what it did; ▸ unfolds the steps underneath (model, tokens, services, the exact call).
+function item(cls, text, raw) {
   const li = document.createElement("li");
   li.className = cls;
-  const b = document.createElement("b"), span = document.createElement("span");
-  b.textContent = label;
-  span.textContent = text;
-  if (raw && raw !== text) {
-    const small = document.createElement("small");
-    small.textContent = raw;
-    span.append(small);
-  }
-  li.append(b, span);
+  li.innerHTML = "<span></span>";
+  li.firstChild.textContent = text;
+  if (raw && raw !== text) li.append(Object.assign(document.createElement("small"), { textContent: raw }));
   linesEl().append(li);
   syncFeed();
   return li;
 }
-const log = (status, source, text, raw) => line(`step ${status}`, source, text, raw);
-const headline = (text) => line("head", "", text);
+const headline = (text) => item("head", text);
 function result(text, status = "ok") {
-  line(`result ${status}`, "", text);
+  item(`result ${status}`, text);
   settleSoon();
+}
+
+function theoLine() {
+  const t = turnEl ?? newTurn();
+  if (t.theo) return t.theo;
+  const li = document.createElement("li");
+  li.className = "theo working";
+  li.innerHTML = `<button type="button" class="say" title="show the steps"><i></i><span>Thinking…</span><em></em><b>▸</b></button><ol class="trace"></ol>`;
+  li.firstChild.addEventListener("click", () => li.classList.toggle("open"));
+  linesEl().append(li);
+  syncFeed();
+  return (t.theo = { li, t0: performance.now(), did: [], doing: "", plan: 0, hand: false });
+}
+const status = (text) => (theoLine().li.querySelector("span").textContent = text);
+function trace(text, cls = "") {
+  const li = Object.assign(document.createElement("li"), { className: cls, textContent: text });
+  theoLine().li.querySelector(".trace").append(li);
+}
+// errors stay in plain sight; a click on the map says what got selected; every other step goes in the trace
+function log(level, source, text, raw) {
+  if (level === "bad") return item("bad", text, raw);
+  if (source === "selected") return item("note", text);
+  if (source.startsWith("step ")) status(`${source.replace("step ", "Step ")}: ${text}…`);
+  trace(`${text}${raw && raw !== text ? ` (${raw})` : ""} · ${source}`, level);
+}
+// the turn is over: the line settles into what was done and how long it took
+function theoDone(ok, word) {
+  const th = turnEl?.theo;
+  if (!th) return;
+  th.li.classList.remove("working");
+  th.li.classList.toggle("failed", !ok);
+  const done = th.plan ? `Did ${th.did.length === th.plan ? "" : `${th.did.length} of `}${th.plan} steps` : th.did[0] ?? "Done";
+  const lower = (s) => s.replace(/…$/, "").replace(/^./, (c) => c.toLowerCase());
+  const text = word ?? (ok ? done : th.doing ? `Stopped ${lower(th.doing)}` : "Stopped");
+  th.li.querySelector("span").textContent = `${th.hand ? "By hand · " : ""}${text}`;
+  th.li.querySelector("em").textContent = `${((performance.now() - th.t0) / 1000).toFixed(1)} s`;
 }
 // ready-to-run prompts the model offered; a tap runs one
 function suggest(list) {
@@ -461,11 +492,51 @@ function describe({ tool, args: a }) {
   } catch {}
   return tool;
 }
-// the pick in words; clicking it unfolds the exact JSON
+// a call in Theo's words, while doing it and once done
+const MODE = { driving: ["Driving", "Drove"], walking: ["Walking", "Walked"], cycling: ["Cycling", "Cycled"] };
+const AROUND = { driving: "drive", walking: "walk", cycling: "ride" };
+const names = (xs) => (xs.length > 3 ? `${xs.length} places` : xs.map(nice).join(", "));
+function said({ tool, args: a }) {
+  try {
+    switch (tool) {
+      case "markers": return [`Pinning ${names(a.places)}…`, `Pinned ${names(a.places)}`];
+      case "route": return [`${MODE[a.profile][0]} ${trip(a.waypoints)}…`, `${MODE[a.profile][1]} ${trip(a.waypoints)}`];
+      case "line": return [`Measuring ${trip(a.places)}…`, `Measured ${trip(a.places)} as the crow flies`];
+      case "buffer": return [`Drawing ${a.radius_km.join(" / ")} km around ${names(a.centers)}…`, `Drew ${a.radius_km.join(" / ")} km around ${names(a.centers)}`];
+      case "isochrone": {
+        const what = `${a.values.join(" / ")} ${a.unit === "km" ? "km" : "min"} ${AROUND[a.profile]} from ${nice(a.center)}`;
+        return [`Mapping a ${what}…`, `Mapped a ${what}`];
+      }
+      case "polygon": return [`Drawing an area between ${names(a.vertices)}…`, `Drew an area between ${names(a.vertices)}`];
+      case "elevation_profile": return [`Reading heights along ${trip(a.waypoints)}…`, `Charted heights along ${trip(a.waypoints)}`];
+      case "boundary": return [`Fetching the outline of ${a.place}…`, `Outlined ${a.place}`];
+      case "map": return {
+        style: [`Switching to ${a.style}…`, `Switched to ${a.style}`], zoom: [`Zooming to ${a.zoom}…`, `Zoomed to ${a.zoom}`],
+        center: ["Moving the map…", `Centered on ${a.lat}, ${a.lon}`], terrain: ["Turning the terrain…", "Toggled 3D terrain"],
+        clear: ["Clearing…", `Cleared ${a.clear && a.clear !== "all" ? a.clear : "the map"}`], locate: ["Finding you…", "Found you"],
+      }[a.action] ?? ["Changing the map…", "Changed the map"];
+      case "reply": return ["Answering…", { clarify: "Asked back", unsupported: "Can't do that one" }[a.kind] ?? "Replied"];
+    }
+  } catch {}
+  return [`${tool}…`, tool];
+}
+// a call was picked: the line says what is happening now; the trace keeps who picked it and the exact call
 function pick(source, call, ms, model, by = "Groq", usage) {
-  const li = line("pick", source, `${describe(call)}${ms ? `   ${ms} ms` : ""}`);
-  const json = line("json", "", `${JSON.stringify(call)}${model ? `   ${model} on ${by}` : ""}${usage ? ` · ${brain.usageText(usage)}` : ""}`);
-  li.addEventListener("click", () => json.classList.toggle("open"));
+  const th = theoLine();
+  th.hand = source === "form";
+  th.li.classList.toggle("hand", th.hand);
+  th.li.classList.toggle("own", !th.hand && brain.get().use !== "shared");
+  if (call.tool === "plan") {
+    th.plan = call.args.steps.length;
+    status(`Planning ${th.plan} steps…`);
+  } else {
+    const [doing, did] = said(call);
+    th.doing = doing;
+    th.pending = did;
+    status(doing);
+  }
+  if (model) trace(`${model} on ${by}${usage ? ` · ${brain.usageText(usage)}` : ""}${ms ? ` · ${ms} ms` : ""}`, "who");
+  trace(JSON.stringify(call), "json");
 }
 
 // once a run ends, the steps fade after 8 s and your message plus the result stay; hover brings them back
@@ -517,6 +588,7 @@ function run(e) {
   pick("form", call);
   fx.state("thinking");
   runCall(call, undefined, true, "form").then((out) => {
+    theoDone(out.ok);
     fx.state(out.ok ? "done" : "error");
     if (out.ok) remember({ user: `(by hand) ${describe(call)}`, calls: [{ ...call, result: out.result }] });
     else shake(), fail(out.err, { again: () => $("form").requestSubmit() });
@@ -769,9 +841,11 @@ async function ask(e) {
   const turn = { user: message, calls: [] };
   sent = message; // stays in the bar, dimmed, until it is done
   $("cancel-notice").classList.remove("visible");
+  if (turnEl?.theo?.li.classList.contains("working")) theoDone(false, "Cancelled");
   thinking(true);
   newTurn();
   headline(message);
+  theoLine();
   try {
     const first = await askModel(message, history, ctrl.signal);
     if (stale()) return;
@@ -819,12 +893,19 @@ async function ask(e) {
       inflight = null;
       thinking(false);
       tabState(failed ? "error" : "done", message);
+      theoDone(!failed);
       fx.state(failed ? "error" : "done");
       if (failed) shake();
       else if ($("msg").value === message) $("msg").value = ""; // done: clear the words; on failure they stay for retry
       sent = null;
     }
   }
+}
+
+// a picked call counts as done once it produces its result
+function landed() {
+  const th = turnEl?.theo;
+  if (th?.pending) th.did.push(th.pending), (th.pending = "");
 }
 
 // runs one call; returns {ok, result, feats} so a turn can be remembered and a plan can fit the map once at the end
@@ -835,7 +916,7 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     ...baseCtx,
     log: (...a) => stale() || log(...a),
     chart: (p) => stale() || chart(p),
-    result: (text, status) => stale() || ((last = text), result(text, status)),
+    result: (text, status) => stale() || ((last = text), landed(), result(text, status)),
     suggest: (list) => stale() || suggest(list),
   };
   if (!validate[call.tool]?.(call.args)) {
