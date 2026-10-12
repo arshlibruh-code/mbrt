@@ -74,6 +74,20 @@
     .row button { flex: 1; cursor: pointer; padding: 8px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; }
     #run { background: var(--ink); color: #0b0d10; border-color: var(--ink); }
     #run:disabled { opacity: 0.5; cursor: wait; }
+    /* the brain row: who answers, folded to one line until opened */
+    #brain { margin-top: 12px; border-top: 1px solid var(--hair); padding-top: 8px; }
+    .brain-head { display: flex; width: 100%; align-items: baseline; gap: 8px; background: none; border: 0; padding: 2px 0; cursor: pointer; color: var(--ink); font: 12px var(--font); text-align: left; }
+    .brain-head span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink2); }
+    .brain-head b { flex: 1; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .brain-head i { font-style: normal; color: var(--muted); transition: transform .2s; }
+    #brain.open .brain-head i { transform: rotate(180deg); }
+    #brain:not(.open) .brain-body { display: none; }
+    .brain-body { margin-top: 8px; }
+    .brain-body .seg button { text-transform: uppercase; font-size: 10px; letter-spacing: .1em; }
+    .brain-pane { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .brain-pane .found { margin: 0; }
+    .brain-btn { cursor: pointer; padding: 7px 8px; font: 700 11px var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); background: var(--field); border: 1px solid var(--hair); }
+    .brain-btn:hover { border-color: var(--cyan); color: #fff; }
 
     /* the feed, written onto the map above the bar: labels right of a center axis, text left of it */
     #feed { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + 10px); width: min(760px, 94vw); max-height: 42vh; overflow-y: auto;
@@ -193,6 +207,7 @@
       <div id="fields"></div>
       <div class="row"><button id="run" type="submit">Run</button><button id="clear" type="button">Clear map</button></div>
     </form>
+    <div id="brain"></div>
   </section>
   <section id="feed">
     <div id="log"></div>

@@ -1,9 +1,9 @@
 // POST {message, history, context} -> {calls: [{tool, args}]}. Runs server-side (Vite middleware locally, Pages Function
 // when deployed) so GROQ_API_KEY never reaches the browser. The model only picks the call.
 import { TOOLS, MAX_CALLS, chatMessages } from "../../eval/tools.js";
+import { openaiBody, openaiCalls } from "../llm.js";
 
 const MODEL = "openai/gpt-oss-120b";
-const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
 const NAMES = new Set(TOOLS.map((t) => t.name));
 const text = (v, max) => (typeof v === "string" ? v.slice(0, max) : "");
 
@@ -39,14 +39,7 @@ export async function handleChat(request, env) {
       method: "POST",
       headers: { authorization: `Bearer ${env.GROQ_API_KEY}`, "content-type": "application/json" },
       signal: AbortSignal.timeout(20000),
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0,
-        tool_choice: "required",
-        parallel_tool_calls: true,
-        tools,
-        messages: chatMessages({ message, history: cleanHistory(body0.history), context: cleanContext(body0.context) }),
-      }),
+      body: JSON.stringify(openaiBody(MODEL, chatMessages({ message, history: cleanHistory(body0.history), context: cleanContext(body0.context) }))),
     });
   } catch (err) {
     return json(504, { error: `Groq did not answer: ${err.message}`, kind: "network" });
@@ -57,12 +50,9 @@ export async function handleChat(request, env) {
     return json(429, { error: `Groq free tier limit reached, try again in ${retryAfter} s`, kind: "limit", retryAfter });
   }
   if (!res.ok) return json(502, { error: `Groq ${res.status}: ${body?.error?.message ?? "no details"}`, kind: "network" });
-  const raw = body.choices?.[0]?.message?.tool_calls ?? [];
-  if (!raw.length) return json(502, { error: "the model answered without picking a tool", kind: "model" });
-  const calls = [];
-  for (const tc of raw.slice(0, MAX_CALLS)) {
-    try { calls.push({ tool: tc.function.name, args: JSON.parse(tc.function.arguments) }); }
-    catch { return json(502, { error: "the model sent malformed arguments", kind: "model" }); }
+  try {
+    return json(200, { calls: openaiCalls(body), model: MODEL, ms: Date.now() - t0 });
+  } catch (err) {
+    return json(502, { error: err.message, kind: "model" });
   }
-  return json(200, { calls, model: MODEL, ms: Date.now() - t0 });
 }

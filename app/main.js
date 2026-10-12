@@ -8,6 +8,8 @@ import golden from "../eval/golden.json";
 import { execute, placeNear, knownMe, lookup } from "./execute.js";
 import { createToolsForm } from "./tools-form.js";
 import { createBarFx } from "./bar-fx.js";
+import * as brain from "./brain.js";
+import { createBrainPicker } from "./brain-picker.js";
 
 maplibregl.setWorkerUrl(workerUrl);
 
@@ -354,9 +356,9 @@ function describe({ tool, args: a }) {
   return tool;
 }
 // the pick in words; clicking it unfolds the exact JSON
-function pick(source, call, ms, model) {
+function pick(source, call, ms, model, by = "Groq") {
   const li = line("pick", source, `${describe(call)}${ms ? `   ${ms} ms` : ""}`);
-  const json = line("json", "", `${JSON.stringify(call)}${model ? `   ${model} on Groq` : ""}`);
+  const json = line("json", "", `${JSON.stringify(call)}${model ? `   ${model} on ${by}` : ""}`);
   li.addEventListener("click", () => json.classList.toggle("open"));
 }
 
@@ -456,24 +458,14 @@ function repairPlaces(call, message) {
   return fixes;
 }
 
+// whichever brain is chosen (brain.js): the shared one on our server, or the visitor's own account
 async function askModel(message, hist, signal, retried = false) {
-  let res;
   try {
-    res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message, history: hist, context: await viewContext() }),
-      signal,
-    });
+    return await brain.ask({ message, history: hist, context: await viewContext(), signal });
   } catch (err) {
-    if (err.name === "AbortError") throw err;
-    throw Object.assign(new Error(err.message), { kind: "network" });
+    if (err.kind === "model" && !retried) return askModel(message, hist, signal, true); // one quiet retry before showing anything
+    throw err;
   }
-  const body = await res.json().catch(() => ({ error: `server ${res.status}` }));
-  if (res.ok) return body;
-  const kind = body.kind ?? (res.status >= 500 ? "network" : "model");
-  if (kind === "model" && !retried) return askModel(message, hist, signal, true); // one quiet retry before showing anything
-  throw Object.assign(new Error(body.error), { kind, retryAfter: body.retryAfter });
 }
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -483,6 +475,8 @@ const VOICE = {
   model: () => "Theo got muddled, try saying it another way",
   nomatch: (e) => `Couldn't find "${e.place}" on the map`,
   config: () => "Theo isn't set up on this server yet",
+  key: (e) => `${e.who ?? "Your provider"} turned down your sign-in or key`,
+  credits: (e) => `Your ${e.who ?? ""} account is out of credits`,
 };
 let waitTimer = 0;
 // show a failure in the current turn; again() repeats what failed
@@ -517,6 +511,8 @@ function fail(err, { message, again }) {
     chips([toolsChip, ["edit message", edit]]);
   } else if (err.kind === "nomatch") {
     chips([["add a city and retry", edit], toolsChip]);
+  } else if (err.kind === "key" || err.kind === "credits") {
+    chips([["change brain", () => (setTools(true), picker.open())], ["retry", again]]);
   } else {
     chips([["retry", again], toolsChip, ["edit message", edit]]);
   }
@@ -676,7 +672,7 @@ async function ask(e) {
     let todo = [{ call: head, ms: first.ms }];
     if (head.tool === "plan") {
       // one step at a time: each step is its own small request, so one-call models can still do several things
-      pick("Theo", head, first.ms, first.model);
+      pick(brain.label(), head, first.ms, first.model, first.by);
       turn.calls.push({ ...head, result: `${head.args.steps.length} steps` });
       todo = head.args.steps.slice(0, 5).map((step) => ({ step }));
     }
@@ -689,11 +685,12 @@ async function ask(e) {
         if (stale()) return;
         ({ ms } = r);
         item.model = r.model;
+        item.by = r.by;
         call = r.calls[0];
         if (call.tool === "plan") throw new Error(`step ${i + 1} came back as another plan`);
       }
       const fixes = repairPlaces(call, item.step ?? message);
-      pick("Theo", call, ms, item.model ?? first.model);
+      pick(brain.label(), call, ms, item.model ?? first.model, item.by ?? first.by);
       if (fixes.length) log("warn", "fixed", `model misspelled ${fixes.join(", ")}`);
       form.set(call.tool, call.args); // mirror into the form, so the call can be edited and rerun by hand
       const out = await runCall(call, stale, false);
@@ -754,6 +751,16 @@ async function runCall(call, stale = () => false, fit = true) {
 }
 
 form.set("isochrone");
+
+// the brain row in the tools overlay; a sign-in that just came back says so in the feed
+const picker = createBrainPicker($("brain"));
+brain.finishSignIn().then((r) => {
+  if (!r) return;
+  newTurn();
+  result(r.text, r.ok ? "ok" : "warn");
+  picker.refresh();
+  settleSoon();
+}).catch((err) => (newTurn(), fail(Object.assign(err, { kind: err.kind ?? "key" }), { again: () => {} })));
 $("form").addEventListener("submit", run);
 $("chat").addEventListener("submit", ask);
 $("clear").addEventListener("click", () => {

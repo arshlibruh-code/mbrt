@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import { handleChat } from "./api/chat.js";
+import { handleChatgpt } from "./api/chatgpt.js";
 
 // /api/chat in dev runs the same handler the deployed Pages Function runs, with the key from the shell
 const devApi = {
@@ -14,6 +15,8 @@ const devApi = {
       res.setHeader("content-type", "application/json");
       res.end(await out.text());
     });
+    // Sign in with ChatGPT works only here, on your own machine (see api/chatgpt.js)
+    server.middlewares.use("/api/chatgpt", handleChatgpt);
   },
 };
 
