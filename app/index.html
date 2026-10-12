@@ -51,9 +51,15 @@
     #feed { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + 10px); width: min(760px, 94vw); max-height: 42vh; overflow-y: auto;
       z-index: 2; pointer-events: none; scrollbar-width: none; user-select: none; -webkit-user-select: none; text-shadow: 0 1px 2px #000, 0 0 10px #000, 0 0 18px rgba(0, 0, 0, 0.8); }
     body:not(.has-feed) #feed { display: none; }
-    #log { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; row-gap: 3px; }
+    #log { display: flex; flex-direction: column; gap: 12px; }
+    .turn { transform-origin: 50% 100%; transition: opacity 0.45s, transform 0.45s; animation: turnIn 0.35s ease-out; }
+    .turn[data-age="1"] { opacity: 0.55; transform: scale(0.95); }
+    .turn[data-age="2"] { opacity: 0.28; transform: scale(0.9); }
+    .turn:hover { opacity: 1; transform: none; }
+    @keyframes turnIn { from { opacity: 0; transform: translateY(14px); } }
+    .turn .lines { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; row-gap: 3px; }
     #log li { display: contents; }
-    #log b, #log span, #chart { pointer-events: auto; transition: opacity 1.2s ease; }
+    #log b, #log span, .chart { pointer-events: auto; transition: opacity 1.2s ease; }
     #log b { text-align: right; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink2); padding-top: 2px; }
     #log span { text-align: left; font-variant-numeric: tabular-nums; }
     #log small { display: block; font-size: 10px; color: var(--muted); }
@@ -62,8 +68,8 @@
     #log .step.bad b { color: var(--bad); }
     #log .head b, #log .result b, #log .json b { display: none; }
     #log .head span, #log .result span, #log .json span { grid-column: 1 / -1; text-align: center; }
-    #log .head span { font-weight: 700; font-size: 18px; text-transform: uppercase; color: #fff; margin-bottom: 4px; }
-    #log .result span { font-weight: 700; font-size: 22px; color: #fff; margin-top: 4px; }
+    #log .head span { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink2); margin-bottom: 2px; }
+    #log .result span { font-weight: 700; font-size: 21px; color: #fff; margin-top: 3px; }
     #log .result.warn span { color: #e2b44f; }
     #log .pick b { color: var(--cyan); }
     #log .pick b, #log .pick span { cursor: pointer; }
@@ -72,17 +78,18 @@
     #log .chips button { pointer-events: auto; cursor: pointer; font: 12px/1.3 var(--font); color: var(--ink); padding: 5px 10px; text-shadow: none;
       background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--hair); }
     #log .chips button:hover { border-color: var(--cyan); color: #fff; }
+    #log .chips button svg { vertical-align: -1px; margin-right: 5px; }
     #log .json.open span { display: block; }
-    #chart { margin: 6px auto 0; width: min(420px, 100%); background: var(--glass); border: 1px solid var(--hair); text-shadow: none; }
-    #chart svg { display: block; width: 100%; height: 80px; }
-    #chart polygon { fill: rgba(255, 255, 255, 0.1); }
-    #chart polyline { fill: none; stroke: var(--ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-    #chart dl { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 6px 7px; border-top: 1px solid var(--hair); }
-    #chart dd { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
-    #chart dt { grid-row: 1; }
+    .chart { margin: 6px auto 0; width: min(420px, 100%); background: var(--glass); border: 1px solid var(--hair); text-shadow: none; }
+    .chart svg { display: block; width: 100%; height: 80px; }
+    .chart polygon { fill: rgba(255, 255, 255, 0.1); }
+    .chart polyline { fill: none; stroke: var(--ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    .chart dl { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 6px 7px; border-top: 1px solid var(--hair); }
+    .chart dd { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+    .chart dt { grid-row: 1; }
     /* settled: steps fade, your message and the result stay, errors stay; hovering the feed brings it all back */
-    .settled #log .step:not(.bad) > *, .settled #log .pick > *, .settled #log .json > * { opacity: 0; }
-    .settled #feed:hover #log > li > * { opacity: 1; }
+    .turn.settled .step:not(.bad) > *, .turn.settled .pick > *, .turn.settled .json > * { opacity: 0; }
+    .turn.settled:hover .lines > li > * { opacity: 1; }
 
     /* the chat bar, carried over from the first mbrt: frosted, big, centered, an orb while thinking */
     #chat { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; padding: 6vh 1vh calc(6vh + env(safe-area-inset-bottom));
@@ -130,8 +137,6 @@
     #map .maplibregl-ctrl-group button:disabled .maplibregl-ctrl-icon { opacity: 0.3; }
     #map .maplibregl-ctrl-top-right { top: 2px; right: 2px; }
     body:not(.turned) #map .maplibregl-ctrl-compass { display: none; }
-    #map .maplibregl-ctrl-group .gear-btn { display: grid; place-items: center; color: var(--ink); }
-    #map .maplibregl-ctrl-group .gear-btn[aria-pressed="true"] { color: var(--cyan); }
     #map .maplibregl-ctrl-group .basemap-btn { font: 700 9px var(--font); letter-spacing: 0.08em; color: var(--ink); }
     #map .maplibregl-ctrl-bottom-left { bottom: calc(var(--bar-h) + 4px); }
     #map .maplibregl-ctrl.maplibregl-ctrl-scale { background: none; margin: 0 0 6px 12px; padding: 0 4px; border: 1px solid var(--ink2); border-top: 0;
@@ -158,8 +163,7 @@
     </form>
   </section>
   <section id="feed">
-    <ol id="log"></ol>
-    <div id="chart" hidden></div>
+    <div id="log"></div>
   </section>
   <form id="chat" autocomplete="off">
     <canvas id="fx" aria-hidden="true"></canvas>

@@ -28,7 +28,7 @@ const cleanContext = (c = {}) => ({
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 export async function handleChat(request, env) {
-  if (!env.GROQ_API_KEY) return json(500, { error: "GROQ_API_KEY is not set on the server" });
+  if (!env.GROQ_API_KEY) return json(500, { error: "GROQ_API_KEY is not set on the server", kind: "config" });
   const body0 = await request.json().catch(() => ({}));
   const message = body0?.message;
   if (typeof message !== "string" || !message.trim() || message.length > 500) return json(400, { error: "message must be 1 to 500 characters" });
@@ -49,17 +49,20 @@ export async function handleChat(request, env) {
       }),
     });
   } catch (err) {
-    return json(504, { error: `Groq did not answer: ${err.message}` });
+    return json(504, { error: `Groq did not answer: ${err.message}`, kind: "network" });
   }
   const body = await res.json().catch(() => null);
-  if (res.status === 429) return json(429, { error: `Groq free tier limit reached, try again in ${res.headers.get("retry-after") ?? "a few"} s` });
-  if (!res.ok) return json(502, { error: `Groq ${res.status}: ${body?.error?.message ?? "no details"}` });
+  if (res.status === 429) {
+    const retryAfter = Math.ceil(Number(res.headers.get("retry-after")) || 20);
+    return json(429, { error: `Groq free tier limit reached, try again in ${retryAfter} s`, kind: "limit", retryAfter });
+  }
+  if (!res.ok) return json(502, { error: `Groq ${res.status}: ${body?.error?.message ?? "no details"}`, kind: "network" });
   const raw = body.choices?.[0]?.message?.tool_calls ?? [];
-  if (!raw.length) return json(502, { error: "the model answered without picking a tool" });
+  if (!raw.length) return json(502, { error: "the model answered without picking a tool", kind: "model" });
   const calls = [];
   for (const tc of raw.slice(0, MAX_CALLS)) {
     try { calls.push({ tool: tc.function.name, args: JSON.parse(tc.function.arguments) }); }
-    catch { return json(502, { error: "the model sent malformed arguments" }); }
+    catch { return json(502, { error: "the model sent malformed arguments", kind: "model" }); }
   }
   return json(200, { calls, model: MODEL, ms: Date.now() - t0 });
 }

@@ -7,11 +7,12 @@
 const COMMON = `#version 300 es
 precision highp float;
 uniform vec2 u_res;
-uniform float u_time, u_flow, u_think, u_done, u_err, u_type, u_focus, u_caret, u_ring, u_collapse;
+uniform float u_time, u_flow, u_think, u_done, u_err, u_type, u_focus, u_caret, u_ring, u_collapse, u_wait, u_waitOn;
 uniform vec3 u_keys[16]; // x in 0..1 across the bar, unused, time of the key
 out vec4 o;
 const vec3 CYAN = vec3(0.031, 0.608, 0.875);
 const vec3 RED = vec3(0.72, 0.34, 0.29);
+const vec3 AMBER = vec3(0.72, 0.53, 0.04);
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float noise(vec2 p) {
   vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
@@ -71,8 +72,11 @@ void main() {
   // error: the rim's light drains from both ends toward the center and holds there as a slow red ember
   float ember = exp(-pow((uv.x - 0.5) * aspect(), 2.0) * 0.35);
   rim *= mix(1.0, ember * (0.85 + 0.15 * sin(u_time * 3.0)) * 1.5, u_err);
+  // waiting out a rate limit: the rim fills left to right in amber as the countdown runs
+  float filled = u_waitOn * step(uv.x, u_wait);
+  rim += filled * (exp(-dTop / 1.8) * 0.6 + exp(-dTop / 22.0) * 0.07);
   float aRim = clamp(rim, 0.0, 1.0) * (0.75 + 0.25 * fade);
-  vec3 rimCol = mix(mix(vec3(0.95, 0.97, 1.0), CYAN, clamp(u_think * bead * 0.8 + u_done * 0.4, 0.0, 1.0)), RED, u_err);
+  vec3 rimCol = mix(mix(mix(vec3(0.95, 0.97, 1.0), CYAN, clamp(u_think * bead * 0.8 + u_done * 0.4, 0.0, 1.0)), RED, u_err), AMBER, filled);
 
   // rim over lines, premultiplied
   vec4 ln = vec4(lineCol * aLine, aLine), rm = vec4(rimCol * aRim, aRim);
@@ -85,7 +89,7 @@ void main() { gl_Position = vec4(pos, 0.0, 1.0); }`;
 
 export function createBarFx(canvas, host) {
   const gl = canvas.getContext("webgl2", { premultipliedAlpha: true, alpha: true, antialias: false });
-  if (!gl) return { state() {}, key() {}, focus() {} };
+  if (!gl) return { state() {}, key() {}, focus() {}, wait() {} };
 
   const compile = (type, src) => {
     const s = gl.createShader(type);
@@ -120,8 +124,9 @@ export function createBarFx(canvas, host) {
 
   // ---- state: targets, eased values, keystrokes
 
-  const target = { think: 0, done: 0, err: 0, focus: 0, collapse: 0 };
-  const val = { think: 0, done: 0, err: 0, focus: 0, type: 0, collapse: 0 };
+  const target = { think: 0, done: 0, err: 0, focus: 0, collapse: 0, waitOn: 0 };
+  const val = { think: 0, done: 0, err: 0, focus: 0, type: 0, collapse: 0, waitOn: 0 };
+  let waitP = 0;
   let ring = 0; // isochrone ring phase: grows while thinking, runs backwards when a request fails
   const keys = new Float32Array(16 * 3);
   let keyIdx = 0, caret = 0.5, flow = 0, last = performance.now(), t0 = last, timer = 0, raf = 0;
@@ -151,6 +156,7 @@ export function createBarFx(canvas, host) {
     ease("err", 7);
     ease("focus", 4);
     ease("collapse", 3);
+    ease("waitOn", 4);
     ring += dt * (0.9 * val.think - 3.2 * val.collapse);
     val.type *= Math.exp(-dt * 2.2);
     flow += dt * (1 - 0.85 * val.done); // terrain flow slows as a result lands
@@ -168,6 +174,8 @@ export function createBarFx(canvas, host) {
     gl.uniform1f(u.u_caret, caret);
     gl.uniform1f(u.u_ring, ring);
     gl.uniform1f(u.u_collapse, val.collapse);
+    gl.uniform1f(u.u_wait, waitP);
+    gl.uniform1f(u.u_waitOn, val.waitOn);
     gl.uniform3fv(u.u_keys, keys);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -178,7 +186,7 @@ export function createBarFx(canvas, host) {
   function schedule(t) {
     clearTimeout(timer);
     if (document.hidden || reduced) return;
-    const busy = target.think > 0 || target.done > 0 || target.err > 0 || !settled() || recentKeys(t);
+    const busy = target.think > 0 || target.done > 0 || target.err > 0 || target.waitOn > 0 || !settled() || recentKeys(t);
     if (busy) raf = requestAnimationFrame(frame);
     else timer = setTimeout(() => (raf = requestAnimationFrame(frame)), 200); // idle drift at ~5 fps
   }
@@ -199,6 +207,12 @@ export function createBarFx(canvas, host) {
       target.collapse = s === "error" && val.think > 0.3 ? 1 : 0; // only a failure mid-thought has rings to pull back
       if (s === "typing") target.focus = 1;
       if (s === "done" || s === "error") back = setTimeout(() => api.state("idle"), s === "done" ? 1600 : 2200);
+      wake();
+    },
+    // progress 0..1 of a wait, or null when it is over
+    wait(p) {
+      target.waitOn = p == null ? 0 : 1;
+      if (p != null) waitP = p;
       wake();
     },
     focus(on) {

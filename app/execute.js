@@ -14,16 +14,18 @@ const gaps = { [VALHALLA]: 1100, [OSRM]: 1100, [NOMINATIM]: 1100, [PHOTON]: 300 
 
 // what a person should read first; the server's own words travel along as `raw`
 const HUMAN = [
-  [/max distance/i, "Too far for this service"],
-  [/NoRoute|Unable to find a route|No path could be found/i, "No road connects these places"],
-  [/No suitable edges|Cannot find a path|NoSegment/i, "No road near this place"],
-  [/\b429\b|Too Many Requests/i, "Rate limited, wait a moment and retry"],
-  [/TimeoutError|aborted|Failed to fetch|NetworkError/i, "The service did not answer"],
-  [/ 50[0234]\b/, "The service is having trouble, try again in a moment"],
+  [/max distance/i, "Too far for this service", "route"],
+  [/NoRoute|Unable to find a route|No path could be found/i, "No road connects these places", "route"],
+  [/No suitable edges|Cannot find a path|NoSegment/i, "No road near this place", "route"],
+  [/\b429\b|Too Many Requests/i, "Rate limited, wait a moment and retry", "network"],
+  [/TimeoutError|aborted|Failed to fetch|NetworkError/i, "The service did not answer", "network"],
+  [/ 50[0234]\b/, "The service is having trouble, try again in a moment", "network"],
 ];
 export function humanError(raw) {
-  const err = new Error(HUMAN.find(([re]) => re.test(raw))?.[1] ?? raw);
+  const hit = HUMAN.find(([re]) => re.test(raw));
+  const err = new Error(hit?.[1] ?? raw);
   err.raw = raw;
+  err.kind = hit?.[2] ?? "route";
   return err;
 }
 const lastCall = {};
@@ -89,7 +91,7 @@ async function geocode(name, ctx) {
   if (!hit) {
     const body = await politeFetch(PHOTON, `${PHOTON}?q=${encodeURIComponent(name)}&limit=1`);
     const f = body?.features?.[0];
-    if (!f) throw new Error(`Photon: no match for "${name}"`);
+    if (!f) throw Object.assign(new Error(`Photon: no match for "${name}"`), { kind: "nomatch", place: name });
     const p = f.properties;
     hit = { coord: f.geometry.coordinates, found: [p.name, p.city ?? p.county, p.state, p.country].filter(Boolean).join(", ") };
     store(key, hit);

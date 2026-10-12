@@ -68,11 +68,27 @@ new ResizeObserver(() => {
 
 // ---- tools overlay
 
-const setTools = (open) => {
-  document.body.classList.toggle("tools-open", open);
-  $("tools-toggle").setAttribute("aria-pressed", open);
-};
+const setTools = (open) => document.body.classList.toggle("tools-open", open);
 const syncFeed = () => document.body.classList.toggle("has-feed", $("log").children.length > 0);
+
+// ---- turns: each message gets its own block above the bar; the last 3 stay (the same 3 Theo remembers),
+// the newest at the bottom, older ones shrink and fade, and a hover brings any of them back
+let turnEl = null;
+function newTurn() {
+  const sec = document.createElement("section");
+  sec.className = "turn";
+  sec.innerHTML = `<ol class="lines"></ol>`;
+  $("log").append(sec);
+  [...$("log").children].slice(0, -3).forEach((t) => t.remove());
+  [...$("log").children].reverse().forEach((t, i) => {
+    t.dataset.age = i;
+    if (i) t.classList.add("settled");
+  });
+  turnEl = sec;
+  syncFeed();
+  return sec;
+}
+const linesEl = () => (turnEl ?? newTurn()).querySelector(".lines");
 
 // ---- tab: title says what is happening; the logo's cyan pin blinks while thinking
 
@@ -90,17 +106,7 @@ function tabState(state, text = "") {
     pulse = setInterval(() => ($("favicon").href = (on = !on) ? ORB_BRIGHT : ORB_DIM), 600);
   } else document.title = text ? `${state === "error" ? "! " : ""}${text} · mbrt` : "mbrt · chat to a map";
 }
-// the gear opens the manual tools; it heads the control stack top-right
-map.addControl({
-  onAdd() {
-    const div = document.createElement("div");
-    div.className = "maplibregl-ctrl maplibregl-ctrl-group";
-    div.innerHTML = `<button type="button" id="tools-toggle" class="gear-btn" title="tools" aria-label="tools" aria-pressed="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
-    div.firstChild.addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
-    return div;
-  },
-  onRemove() {},
-}, "top-right");
+const GEAR = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`;
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
 // one button that cycles the basemap; it shows the current one
@@ -285,8 +291,7 @@ function line(cls, label, text, raw) {
     span.append(small);
   }
   li.append(b, span);
-  $("log").append(li);
-  span.scrollIntoView({ block: "nearest" });
+  linesEl().append(li);
   syncFeed();
   return li;
 }
@@ -298,21 +303,28 @@ function result(text, status = "ok") {
 }
 // ready-to-run prompts the model offered; a tap runs one
 function suggest(list) {
+  chips(list.slice(0, 3).map((text) => [text, () => send(text)]));
+}
+// a row of small buttons under the current turn: [label, onClick]
+function chips(items) {
   const li = document.createElement("li");
   li.className = "chips";
-  for (const text of list.slice(0, 3)) {
+  for (const [label, fn, icon] of items) {
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = text;
-    b.addEventListener("click", () => {
-      $("msg").value = text;
-      $("chat").requestSubmit();
-    });
+    b.textContent = label;
+    if (icon) b.insertAdjacentHTML("afterbegin", icon);
+    b.addEventListener("click", fn);
     li.append(b);
   }
-  $("log").append(li);
+  linesEl().append(li);
   syncFeed();
+  return li;
 }
+const send = (text) => {
+  $("msg").value = text;
+  $("chat").requestSubmit();
+};
 
 const nice = (p) => (p === "@me" ? "your location" : p === "@selected" ? "the selected feature" : p);
 const trip = (xs) => xs.map(nice).join(" → ");
@@ -344,9 +356,11 @@ function pick(source, call, ms, model) {
 // once a run ends, the steps fade after 8 s and your message plus the result stay; hover brings them back
 let settleTimer = 0;
 function settleSoon() {
+  const t = turnEl;
+  if (!t) return;
   clearTimeout(settleTimer);
-  document.body.classList.remove("settled");
-  settleTimer = setTimeout(() => document.body.classList.add("settled"), 8000);
+  t.classList.remove("settled");
+  settleTimer = setTimeout(() => t.classList.add("settled"), 8000);
 }
 
 function chart(profile) {
@@ -357,9 +371,11 @@ function chart(profile) {
   for (let i = 1; i < hs.length; i++) gain += Math.max(0, hs[i] - hs[i - 1]);
   const W = 300, H = 90, x = (d) => (d / km) * W, y = (h) => H - 4 - ((h - lo) / (hi - lo || 1)) * (H - 8);
   const line = pts.map(([d, h]) => `${x(d).toFixed(1)},${y(h).toFixed(1)}`).join(" ");
-  $("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polygon points="0,${H} ${line} ${W},${H}" /><polyline points="${line}" /></svg>
+  const box = document.createElement("div");
+  box.className = "chart";
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polygon points="0,${H} ${line} ${W},${H}" /><polyline points="${line}" /></svg>
     <dl><dt>length</dt><dd>${km.toFixed(1)} km</dd><dt>low</dt><dd>${lo} m</dd><dt>high</dt><dd>${hi} m</dd><dt>climb</dt><dd>${Math.round(gain)} m</dd></dl>`;
-  $("chart").hidden = false;
+  (turnEl ?? newTurn()).append(box);
 }
 
 const baseCtx = { log, chart, result, suggest, mapAction, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
@@ -420,26 +436,25 @@ function readArgs(t) {
   return args;
 }
 
-const resetOutput = () => {
+const clearFeed = () => {
   clearTimeout(settleTimer);
-  document.body.classList.remove("settled");
   $("log").replaceChildren();
-  $("chart").hidden = true;
+  turnEl = null;
   syncFeed();
 };
 
 function run(e) {
   e.preventDefault();
   const t = TOOLS.find((t) => t.name === $("tool").value);
-  resetOutput();
+  newTurn();
   setTools(false); // the overlay sits on the map
   const call = { tool: t.name, args: readArgs(t) };
   pick("form", call);
   fx.state("thinking");
   runCall(call).then((out) => {
     fx.state(out.ok ? "done" : "error");
-    if (!out.ok) shake();
     if (out.ok) remember({ user: `(by hand) ${describe(call)}`, calls: [{ ...call, result: out.result }] });
+    else shake(), fail(out.err, { again: () => $("form").requestSubmit() });
   });
 }
 
@@ -485,16 +500,71 @@ function repairPlaces(call, message) {
   return fixes;
 }
 
-async function askModel(message, hist, signal) {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ message, history: hist, context: await viewContext() }),
-    signal,
-  });
+async function askModel(message, hist, signal, retried = false) {
+  let res;
+  try {
+    res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message, history: hist, context: await viewContext() }),
+      signal,
+    });
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    throw Object.assign(new Error(err.message), { kind: "network" });
+  }
   const body = await res.json().catch(() => ({ error: `server ${res.status}` }));
-  if (!res.ok) throw new Error(body.error);
-  return body;
+  if (res.ok) return body;
+  const kind = body.kind ?? (res.status >= 500 ? "network" : "model");
+  if (kind === "model" && !retried) return askModel(message, hist, signal, true); // one quiet retry before showing anything
+  throw Object.assign(new Error(body.error), { kind, retryAfter: body.retryAfter });
+}
+
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+const VOICE = {
+  limit: (e) => `Theo needs a breather, back in ${mmss(e.retryAfter ?? 20)}`,
+  network: () => "Theo couldn't reach a service just now",
+  model: () => "Theo got muddled, try saying it another way",
+  nomatch: (e) => `Couldn't find "${e.place}" on the map`,
+  config: () => "Theo isn't set up on this server yet",
+};
+let waitTimer = 0;
+// show a failure in the current turn; again() repeats what failed
+function fail(err, { message, again }) {
+  const voice = VOICE[err.kind]?.(err) ?? err.message;
+  const li = log("bad", "error", voice, err.raw ?? (voice !== err.message ? err.message : ""));
+  const edit = () => {
+    if (message) $("msg").value = message;
+    $("msg").focus();
+    $("msg").select();
+  };
+  const tools = () => setTools(true);
+  const toolsChip = ["tools", tools, GEAR];
+  if (err.kind === "limit") {
+    // count down in the line and fill the bar's rim in amber; resend by itself if the words are unchanged
+    clearInterval(waitTimer);
+    const total = err.retryAfter ?? 20;
+    let left = total;
+    const span = li.querySelector("span");
+    const keep = span.querySelector("small");
+    waitTimer = setInterval(() => {
+      left--;
+      span.firstChild.textContent = VOICE.limit({ retryAfter: Math.max(left, 0) });
+      fx.wait(1 - left / total);
+      if (left > 0) return;
+      clearInterval(waitTimer);
+      fx.wait(null);
+      if (message && $("msg").value === message && !inflight) again();
+    }, 1000);
+    fx.wait(0);
+    if (keep) span.append(keep);
+    chips([toolsChip, ["edit message", edit]]);
+  } else if (err.kind === "nomatch") {
+    chips([["add a city and retry", edit], toolsChip]);
+  } else {
+    chips([["retry", again], toolsChip, ["edit message", edit]]);
+  }
+  settleSoon();
 }
 
 function fitTo(feats) {
@@ -508,6 +578,11 @@ function fitTo(feats) {
 // the model only names the call; the server holds the Groq key (app/api/chat.js).
 // A new message cancels the one in flight, and anything the old one still produces is dropped.
 let inflight = null;
+let sent = null; // the message in flight, kept in the bar until it lands
+$("msg").addEventListener("beforeinput", () => {
+  if (sent && $("msg").value === sent) $("msg").value = "";
+});
+
 // ---- the bar's shader layer: contours in a glass slab, following the chat state
 
 // one damped side-to-side shake of the bar's text on a failure, like a refused password
@@ -621,7 +696,7 @@ const thinking = (on) => {
   if (on) $("msg").placeholder = "Theo is thinking...";
   if (!on) $("cancel-notice").classList.remove("visible");
 };
-$("msg").addEventListener("input", () => $("cancel-notice").classList.toggle("visible", !!inflight && $("msg").value !== ""));
+$("msg").addEventListener("input", () => $("cancel-notice").classList.toggle("visible", !!inflight && $("msg").value !== "" && $("msg").value !== sent));
 $("msg").addEventListener("focus", stopSpin);
 
 async function ask(e) {
@@ -633,10 +708,10 @@ async function ask(e) {
   const stale = () => ctrl !== inflight;
   let failed = false;
   const turn = { user: message, calls: [] };
-  $("msg").value = "";
+  sent = message; // stays in the bar, dimmed, until it is done
   $("cancel-notice").classList.remove("visible");
   thinking(true);
-  resetOutput();
+  newTurn();
   headline(message);
   try {
     const first = await askModel(message, history, ctrl.signal);
@@ -671,12 +746,13 @@ async function ask(e) {
       drawnNow.push(...out.feats);
       if (!out.ok) {
         failed = true;
+        if (!stale()) fail(out.err, { message, again: () => send(message) });
         break;
       }
     }
     if (!stale()) fitTo(drawnNow);
   } catch (err) {
-    if (!stale()) log("bad", "error", err.message), settleSoon(), (failed = true);
+    if (!stale() && err.name !== "AbortError") fail(err, { message, again: () => send(message) }), (failed = true);
   } finally {
     if (!stale()) {
       if (turn.calls.length) remember(turn);
@@ -685,6 +761,8 @@ async function ask(e) {
       tabState(failed ? "error" : "done", message);
       fx.state(failed ? "error" : "done");
       if (failed) shake();
+      else if ($("msg").value === message) $("msg").value = ""; // done: clear the words; on failure they stay for retry
+      sent = null;
     }
   }
 }
@@ -700,9 +778,8 @@ async function runCall(call, stale = () => false, fit = true) {
     suggest: (list) => stale() || suggest(list),
   };
   if (!validate[call.tool]?.(call.args)) {
-    ctx.log("bad", "schema", "The model's call does not fit the tool", validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`);
-    settleSoon();
-    return { ok: false, result: "the call did not fit the tool", feats: [] };
+    const raw = validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`;
+    return { ok: false, result: "the call did not fit the tool", feats: [], err: Object.assign(new Error(raw), { kind: "model", raw }) };
   }
   $("run").disabled = true;
   stopSpin();
@@ -715,9 +792,7 @@ async function runCall(call, stale = () => false, fit = true) {
     if (fit) fitTo(feats);
     return { ok: true, result: last, feats };
   } catch (err) {
-    ctx.log("bad", "error", err.message, err.raw);
-    settleSoon();
-    return { ok: false, result: `failed: ${err.message}`, feats: [] };
+    return { ok: false, result: `failed: ${err.message}`, feats: [], err };
   } finally {
     $("run").disabled = false;
   }
@@ -733,7 +808,7 @@ $("clear").addEventListener("click", () => {
   history = []; // a clean map is a fresh conversation
   selectedFid = 0;
   refresh();
-  resetOutput();
+  clearFeed();
 });
 renderFields();
 
