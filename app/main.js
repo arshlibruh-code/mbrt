@@ -6,6 +6,7 @@ import Ajv from "ajv";
 import { TOOLS } from "../eval/tools.js";
 import golden from "../eval/golden.json";
 import { execute, placeNear, knownMe } from "./execute.js";
+import { createBarFx } from "./bar-fx.js";
 
 maplibregl.setWorkerUrl(workerUrl);
 
@@ -434,7 +435,11 @@ function run(e) {
   setTools(false); // the overlay sits on the map
   const call = { tool: t.name, args: readArgs(t) };
   pick("form", call);
-  runCall(call).then((out) => out.ok && remember({ user: `(by hand) ${describe(call)}`, calls: [{ ...call, result: out.result }] }));
+  fx.state("thinking");
+  runCall(call).then((out) => {
+    fx.state(out.ok ? "done" : "error");
+    if (out.ok) remember({ user: `(by hand) ${describe(call)}`, calls: [{ ...call, result: out.result }] });
+  });
 }
 
 // ---- memory and context: the last 3 turns and what the map shows go with every message
@@ -502,8 +507,54 @@ function fitTo(feats) {
 // the model only names the call; the server holds the Groq key (app/api/chat.js).
 // A new message cancels the one in flight, and anything the old one still produces is dropped.
 let inflight = null;
+// ---- the bar's shader layer, with a temporary lab to compare the five variants (1-5) and step through states
+
+const fx = createBarFx($("fx"), $("chat"));
+const measure = document.createElement("canvas").getContext("2d");
+function caretX() {
+  const m = $("msg"), st = getComputedStyle(m);
+  measure.font = `${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
+  const w = measure.measureText(m.value.toUpperCase()).width;
+  const bar = $("chat").getBoundingClientRect(), r = m.getBoundingClientRect();
+  return Math.min(1, Math.max(0, (r.left + r.width / 2 + w / 2 - bar.left) / bar.width));
+}
+$("msg").addEventListener("input", () => fx.key(caretX()));
+$("msg").addEventListener("focus", () => fx.focus(true));
+$("msg").addEventListener("blur", () => fx.focus(false));
+
+const lab = document.createElement("nav");
+lab.id = "fxlab";
+lab.innerHTML = fx.names.map((n, i) => `<button type="button" data-v="${i}" title="${n}">${i + 1} ${n}</button>`).join("") +
+  `<span></span>` + ["idle", "typing", "thinking", "done", "error"].map((s) => `<button type="button" data-s="${s}">${s}</button>`).join("");
+document.body.append(lab);
+let demo = 0;
+function pickVariant(i) {
+  fx.setVariant(i);
+  for (const b of lab.querySelectorAll("[data-v]")) b.setAttribute("aria-pressed", +b.dataset.v === i);
+  try { localStorage.setItem("mbrt-fx", i); } catch {}
+}
+lab.addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.v) return pickVariant(+b.dataset.v);
+  clearInterval(demo);
+  if (b.dataset.s === "typing") {
+    // fake keystrokes walking across the bar
+    let x = 0.38;
+    fx.state("typing");
+    demo = setInterval(() => (fx.key((x += 0.012 + Math.random() * 0.01)), x > 0.64 && clearInterval(demo)), 140);
+  } else fx.state(b.dataset.s);
+});
+addEventListener("keydown", (e) => {
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || !/^[1-5]$/.test(e.key)) return;
+  pickVariant(+e.key - 1);
+});
+let savedFx = 0;
+try { savedFx = +(localStorage.getItem("mbrt-fx") ?? 0); } catch {}
+pickVariant(savedFx);
+
 const thinking = (on) => {
-  if (on) tabState("thinking");
+  if (on) tabState("thinking"), fx.state("thinking");
   $("msg").classList.toggle("thinking", on);
   $("msg").closest(".field").classList.toggle("thinking", on);
   $("msg").placeholder = on ? "Thinking..." : "Ask the map anything";
@@ -570,6 +621,7 @@ async function ask(e) {
       inflight = null;
       thinking(false);
       tabState(failed ? "error" : "done", message);
+      fx.state(failed ? "error" : "done");
     }
   }
 }
