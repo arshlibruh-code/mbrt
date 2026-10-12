@@ -1,0 +1,6 @@
+model,id,run,ok,tool_ok,valid,ms,in_tok,out_tok,tool,args,why,raw
+"codex:gpt-6-luna","g28","0","true","true","true","25094","0","0","buffer","{""centers"":[""@selected""],""radius_km"":[50]}","",""
+"codex:gpt-6-luna","g37","0","true","true","true","10983","0","0","isochrone","{""center"":""@me"",""profile"":""walking"",""unit"":""minutes"",""values"":[20]}","",""
+"codex:gpt-6-luna","g42","0","true","true","true","10045","0","0","reply","{""kind"":""clarify"",""text"":""Which route should I show the elevation profile for? Give me the start and end points.""}","",""
+"codex:gpt-6-luna","n03","0","true","true","true","15741","0","0","reply","{""kind"":""clarify"",""text"":""Where should I route from and to?""}","",""
+"codex:gpt-6-luna","n05","0","true","true","true","14282","0","0","reply","{""kind"":""clarify"",""text"":""Where should I center the buffer, and what radius should it have?""}","",""

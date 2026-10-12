@@ -1,0 +1,11 @@
+model,id,run,ok,tool_ok,valid,ms,in_tok,out_tok,tool,args,why,raw
+"codex:gpt-6-luna","g07","0","true","true","true","16653","0","0","markers","{""places"":[""Hawa Mahal, Jaipur"",""Amber Fort, Jaipur"",""City Palace, Jaipur"",""Jantar Mantar, Jaipur"",""Jal Mahal, Jaipur""]}","",""
+"codex:gpt-6-luna","g17","0","true","true","true","13209","0","0","route","{""waypoints"":[""Bengaluru"",""Hubli"",""Belagavi"",""Dharwad"",""Goa""],""profile"":""driving""}","",""
+"codex:gpt-6-luna","g24","0","true","true","true","17920","0","0","buffer","{""centers"":[""Marine Drive, Mumbai""],""radius_km"":[0.5]}","",""
+"codex:gpt-6-luna","g25","0","true","true","true","15257","0","0","buffer","{""centers"":[""Central Park, New York City""],""radius_km"":[3.218688]}","",""
+"codex:gpt-6-luna","g26","0","true","true","true","12420","0","0","buffer","{""centers"":[""Dehradun, Uttarakhand"",""Haldwani, Uttarakhand""],""radius_km"":[20,35]}","",""
+"codex:gpt-6-luna","g32","0","true","true","true","11538","0","0","isochrone","{""center"":""Auroville"",""profile"":""cycling"",""unit"":""minutes"",""values"":[10,20,30]}","",""
+"codex:gpt-6-luna","g34","0","true","true","true","14562","0","0","isochrone","{""center"":""Gachibowli, Hyderabad"",""profile"":""driving"",""unit"":""km"",""values"":[5]}","",""
+"codex:gpt-6-luna","g37","0","true","true","true","14194","0","0","isochrone","{""center"":""@me"",""profile"":""walking"",""unit"":""minutes"",""values"":[20]}","",""
+"codex:gpt-6-luna","g42","0","true","true","true","10921","0","0","reply","{""kind"":""clarify"",""text"":""Which route should I show the elevation profile for? Give me the waypoints, or say “this line” for the selected line.""}","",""
+"codex:gpt-6-luna","n03","0","false","false","true","13648","0","0","route","{""waypoints"":[],""profile"":""driving""}","tool route",""

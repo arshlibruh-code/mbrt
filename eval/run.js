@@ -1,9 +1,14 @@
 // Score a model on the golden set.
 //   node run.js --dry                       check golden + scorer, no API call
-//   node run.js --model claude-haiku-5-5    3 runs per prompt, CSV in results/
+//   node run.js --model claude-haiku-5-5    Anthropic (ANTHROPIC_API_KEY)
+//   node run.js --model groq:openai/gpt-oss-120b --runs 1 --concurrency 1   Groq free (GROQ_API_KEY)
+//   node run.js --model codex --runs 1      ChatGPT plan through the logged-in Codex CLI, no key
+// golden rows may carry "alt": other answers that also count as right
 // Flags: --runs N  --effort low|medium|high  --only g08,g17  --concurrency N
 
 import fs from "node:fs";
+import os from "node:os";
+import { execFile } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv from "ajv";
@@ -58,6 +63,93 @@ async function anthropicAdapter() {
   };
 }
 
+// Groq speaks the OpenAI chat format. Free tier is ~30 RPM and 8K TPM, so 429s are expected: wait and retry.
+async function groqAdapter(model) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("GROQ_API_KEY is not set");
+  const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
+  return async (prompt) => {
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          tool_choice: "required",
+          tools,
+          messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }],
+        }),
+      });
+      if (res.status === 429 && attempt < 8) {
+        const wait = Number(res.headers.get("retry-after") ?? 10);
+        await new Promise((r) => setTimeout(r, (wait + 1) * 1000));
+        continue;
+      }
+      const body = await res.json();
+      if (!res.ok) return { call: null, inTok: 0, outTok: 0, raw: `error: ${res.status} ${body.error?.message ?? ""}` };
+      const msg = body.choices[0].message, fn = msg.tool_calls?.[0]?.function;
+      let args = null;
+      try { args = fn && JSON.parse(fn.arguments); } catch {}
+      return {
+        call: fn ? { tool: fn.name, args } : null,
+        inTok: body.usage?.prompt_tokens ?? 0,
+        outTok: body.usage?.completion_tokens ?? 0,
+        raw: fn ? "" : `no tool call: ${msg.content ?? ""}`,
+      };
+    }
+  };
+}
+
+// ChatGPT plan via `codex exec --output-schema`. Structured outputs want a root object with every key
+// required, so the call is wrapped as {call: anyOf[...]} and optional map fields become nullable.
+function codexSchema() {
+  const variants = TOOLS.map((t) => {
+    const props = {}, sch = t.input_schema;
+    for (const [k, v] of Object.entries(sch.properties))
+      props[k] = sch.required.includes(k) ? v : { ...v, type: [v.type, "null"], ...(v.enum && { enum: [...v.enum, null] }) };
+    return {
+      type: "object",
+      properties: { tool: { type: "string", enum: [t.name] }, args: { type: "object", properties: props, required: Object.keys(props), additionalProperties: false } },
+      required: ["tool", "args"],
+      additionalProperties: false,
+    };
+  });
+  return { type: "object", properties: { call: { anyOf: variants } }, required: ["call"], additionalProperties: false };
+}
+
+async function codexAdapter(model) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mbrt-codex-"));
+  const schemaFile = path.join(dir, "schema.json");
+  fs.writeFileSync(schemaFile, JSON.stringify(codexSchema()));
+  let n = 0;
+  return (prompt) => new Promise((resolve) => {
+    const out = path.join(dir, `out-${n++}.json`);
+    const argv = ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only", "-C", dir,
+      "-c", `model_reasoning_effort="${EFFORT}"`, "--output-schema", schemaFile, "-o", out];
+    if (model) argv.push("-m", model);
+    argv.push(`${SYSTEM}\nDo not run any commands or read files. Pick the tool call for this message:\n\n${prompt}`);
+    const child = execFile("codex", argv, { timeout: 180000 }, (err, _stdout, stderr) => {
+      let call = null, raw = "";
+      try {
+        call = JSON.parse(fs.readFileSync(out, "utf8")).call;
+        for (const k of Object.keys(call.args)) if (call.args[k] === null) delete call.args[k];
+      } catch {
+        raw = `error: ${err?.message ?? ""} ${String(stderr).slice(-300)}`;
+      }
+      resolve({ call, inTok: 0, outTok: 0, raw });
+    });
+    child.stdin.end(); // codex exec waits on an open stdin otherwise
+  });
+}
+
+function pickAdapter() {
+  if (MODEL.startsWith("groq:")) return groqAdapter(MODEL.slice(5));
+  if (MODEL === "codex" || MODEL.startsWith("codex:")) return codexAdapter(MODEL.slice(6) || null);
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set");
+  return anthropicAdapter();
+}
+
 // ---- dry run: golden must satisfy its own schema and score 100%, mutations must fail
 
 const PLACE_KEYS = ["places", "waypoints", "vertices", "centers", "center", "place"];
@@ -66,6 +158,7 @@ function dry() {
   let fails = 0;
   const say = (msg) => (fails++, console.log("FAIL", msg));
   for (const g of golden) {
+    for (const a of g.alt ?? []) if (!valid(a)) say(`${g.id} alt is not schema-valid`);
     if (!valid(g.expect)) say(`${g.id} expect is not schema-valid: ${ajv.errorsText(validators[g.expect.tool]?.errors)}`);
     if (!score(g.expect, g.expect, g.match).ok) say(`${g.id} does not match itself`);
     const other = TOOLS.find((t) => t.name !== g.expect.tool).name;
@@ -87,11 +180,13 @@ const q = (xs, p) => xs.slice().sort((a, b) => a - b)[Math.min(xs.length - 1, Ma
 const csvCell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
 async function run() {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("ANTHROPIC_API_KEY is not set");
+  let ask;
+  try {
+    ask = await pickAdapter();
+  } catch (err) {
+    console.error(err.message);
     process.exit(1);
   }
-  const ask = await anthropicAdapter();
   const jobs = golden.flatMap((g) => Array.from({ length: RUNS }, (_, run) => ({ g, run })));
   const rows = [];
   let next = 0;
@@ -105,7 +200,7 @@ async function run() {
       } catch (err) {
         r = { call: null, inTok: 0, outTok: 0, raw: `error: ${err.status ?? ""} ${err.message}` };
       }
-      const s = score(r.call, g.expect, g.match);
+      const s = [g.expect, ...(g.alt ?? [])].map((e) => score(r.call, e, g.match)).find((x) => x.ok) ?? score(r.call, g.expect, g.match);
       rows.push({ id: g.id, run, ms: Date.now() - t0, valid: valid(r.call), ...s, ...r });
       process.stdout.write(s.ok ? "." : "x");
     }
@@ -115,7 +210,7 @@ async function run() {
 
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "");
   fs.mkdirSync(path.join(here, "results"), { recursive: true });
-  const file = path.join(here, "results", `${MODEL}-${EFFORT}-${stamp}.csv`);
+  const file = path.join(here, "results", `${MODEL.replace(/[^a-z0-9.-]+/gi, "_")}-${EFFORT}-${stamp}.csv`);
   const head = ["model", "id", "run", "ok", "tool_ok", "valid", "ms", "in_tok", "out_tok", "tool", "args", "why", "raw"];
   rows.sort((a, b) => a.id.localeCompare(b.id) || a.run - b.run);
   fs.writeFileSync(file, [head.join(","), ...rows.map((r) =>
@@ -133,7 +228,7 @@ async function run() {
   console.log(`args right   ${pct(rows.filter((r) => r.ok).length, n)}`);
   console.log(`negatives    ${pct(neg.filter((r) => r.ok).length, neg.length)}`);
   console.log(`latency      p50 ${q(ms, 0.5)} ms, p95 ${q(ms, 0.95)} ms`);
-  console.log(`tokens       ${inTok} in, ${outTok} out, $${cost.toFixed(4)} total, $${(cost / n).toFixed(6)} per request`);
+  console.log(`tokens       ${inTok} in, ${outTok} out, ${Number.isNaN(cost) ? "cost n/a" : `$${cost.toFixed(4)} total, $${(cost / n).toFixed(6)} per request`}`);
   const misses = rows.filter((r) => !r.ok);
   if (misses.length) {
     console.log("misses:");

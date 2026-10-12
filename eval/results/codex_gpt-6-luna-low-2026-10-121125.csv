@@ -1,0 +1,2 @@
+model,id,run,ok,tool_ok,valid,ms,in_tok,out_tok,tool,args,why,raw
+"codex:gpt-6-luna","n03","0","false","false","true","13764","0","0","route","{""waypoints"":[""@me"",""@selected""],""profile"":""driving""}","tool route",""

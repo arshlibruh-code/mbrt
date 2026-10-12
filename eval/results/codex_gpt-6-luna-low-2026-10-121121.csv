@@ -1,0 +1,3 @@
+model,id,run,ok,tool_ok,valid,ms,in_tok,out_tok,tool,args,why,raw
+"codex:gpt-6-luna","g30","0","true","true","true","15568","0","0","isochrone","{""center"":""Koramangala, Bengaluru"",""profile"":""driving"",""unit"":""minutes"",""values"":[30]}","",""
+"codex:gpt-6-luna","g47","0","true","true","true","12960","0","0","map","{""action"":""center"",""lat"":12.9716,""lon"":77.5946}","",""

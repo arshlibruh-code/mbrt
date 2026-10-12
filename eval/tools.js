@@ -2,7 +2,8 @@
 // Places stay as names; the geocoder resolves them, never the model.
 
 const place = { type: "string", description: 'A place name as the user meant it, e.g. "Koramangala, Bengaluru". "@selected" = the feature the user picked on the map, "@me" = the user\'s location.' };
-const places = { type: "array", items: place };
+const places = { type: "array", items: place, minItems: 1 };
+const trip = { ...places, minItems: 2 }; // a route or line needs two ends; with fewer, reply clarify
 const profile = { type: "string", enum: ["driving", "walking", "cycling"] };
 
 const tool = (name, description, properties, required) => ({
@@ -15,16 +16,16 @@ export const TOOLS = [
   tool("markers", "Drop pins on one or more places. Also for 'where is X' and 'top N places in Y' (pick the N places yourself).",
     { places }, ["places"]),
   tool("route", "Road or path route through waypoints in travel order. Also for travel distance or time between places.",
-    { waypoints: places, profile }, ["waypoints", "profile"]),
+    { waypoints: trip, profile }, ["waypoints", "profile"]),
   tool("line", "Straight line segments joining places in order (as the crow flies, not a road route).",
-    { places }, ["places"]),
+    { places: trip }, ["places"]),
   tool("buffer", "Circle of a fixed radius around each center. radius_km has one value per center, or a single value for all. Convert miles and metres to km.",
     { centers: places, radius_km: { type: "array", items: { type: "number" } } }, ["centers", "radius_km"]),
   tool("isochrone", "Area reachable from a center within a travel time (unit minutes) or travel distance (unit km). One value per contour.",
     { center: place, profile, unit: { type: "string", enum: ["minutes", "km"] }, values: { type: "array", items: { type: "number" } } },
     ["center", "profile", "unit", "values"]),
   tool("polygon", "Filled polygon whose vertices are the given places.",
-    { vertices: places }, ["vertices"]),
+    { vertices: { ...places, minItems: 3 } }, ["vertices"]),
   tool("elevation_profile", "Height profile along a line. Use waypoints ['@selected'] for a line the user picked, else the route waypoints.",
     { waypoints: places, profile }, ["waypoints", "profile"]),
   tool("boundary", "Official administrative outline of a named region (country, state, district, city).",
@@ -45,4 +46,5 @@ export const TOOLS = [
 export const SYSTEM = `You control a map. Answer every message by calling exactly one tool, never with plain text.
 Keep place names as the user wrote them, adding the city or region when it is obvious, and never invent coordinates.
 "here" or "my location" means "@me"; "this point", "this line" or "the selected one" means "@selected".
+If the message is missing a place or number the tool needs, call reply with kind "clarify". Use "@me" or "@selected" only when the user's words point to them.
 Default profile is driving.`;
