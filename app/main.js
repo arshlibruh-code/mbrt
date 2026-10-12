@@ -5,7 +5,7 @@ import { bbox } from "@turf/turf";
 import Ajv from "ajv";
 import { TOOLS } from "../eval/tools.js";
 import golden from "../eval/golden.json";
-import { execute } from "./execute.js";
+import { execute, placeNear, knownMe } from "./execute.js";
 
 maplibregl.setWorkerUrl(workerUrl);
 
@@ -284,6 +284,23 @@ function result(text, status = "ok") {
   line(`result ${status}`, "", text);
   settleSoon();
 }
+// ready-to-run prompts the model offered; a tap runs one
+function suggest(list) {
+  const li = document.createElement("li");
+  li.className = "chips";
+  for (const text of list.slice(0, 3)) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    b.addEventListener("click", () => {
+      $("msg").value = text;
+      $("chat").requestSubmit();
+    });
+    li.append(b);
+  }
+  $("log").append(li);
+  syncFeed();
+}
 
 const nice = (p) => (p === "@me" ? "your location" : p === "@selected" ? "the selected feature" : p);
 const trip = (xs) => xs.map(nice).join(" → ");
@@ -300,6 +317,7 @@ function describe({ tool, args: a }) {
       case "boundary": return `boundary · ${a.place}`;
       case "map": return `map · ${[a.action, a.style, a.zoom, a.clear, a.lat != null ? `${a.lat}, ${a.lon}` : null].filter((x) => x != null).join(" ")}`;
       case "reply": return `reply · ${a.kind}`;
+      case "plan": return `plan · ${a.steps.length} steps`;
     }
   } catch {}
   return tool;
@@ -332,7 +350,7 @@ function chart(profile) {
   $("chart").hidden = false;
 }
 
-const baseCtx = { log, chart, result, mapAction, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
+const baseCtx = { log, chart, result, suggest, mapAction, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
 
 // ---- the form is generated from the same tool schema the model will fill
 
@@ -405,7 +423,38 @@ function run(e) {
   setTools(false); // the overlay sits on the map
   const call = { tool: t.name, args: readArgs(t) };
   pick("form", call);
-  runCall(call);
+  runCall(call).then((out) => out.ok && remember({ user: `(by hand) ${describe(call)}`, calls: [{ ...call, result: out.result }] }));
+}
+
+// ---- memory and context: the last 3 turns and what the map shows go with every message
+
+let history = [];
+const remember = (turn) => (history = [...history, turn].slice(-3));
+
+async function viewContext() {
+  const zoom = map.getZoom(), sel = baseCtx.selected();
+  const near = zoom >= 5 ? await placeNear(map.getCenter().toArray()).catch(() => "") : "";
+  return { zoom, near, selected: sel ? `${sel.properties.kind} ${sel.properties.label}` : "", me: !!knownMe };
+}
+
+async function askModel(message, hist, signal) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message, history: hist, context: await viewContext() }),
+    signal,
+  });
+  const body = await res.json().catch(() => ({ error: `server ${res.status}` }));
+  if (!res.ok) throw new Error(body.error);
+  return body;
+}
+
+function fitTo(feats) {
+  if (!feats.length) return;
+  const [w, s, e, n] = bbox({ type: "FeatureCollection", features: feats });
+  const flight = { curve: 1.6, speed: 1.1, maxDuration: 6000 }; // a far jump pulls out to the globe and arcs across
+  if (w === e && s === n) map.flyTo({ center: [w, s], zoom: Math.max(map.getZoom(), 12), ...flight });
+  else map.fitBounds([w, s, e, n], { padding: 60, maxZoom: 14, ...flight });
 }
 
 // the model only names the call; the server holds the Groq key (app/api/chat.js).
@@ -429,24 +478,51 @@ async function ask(e) {
   const ctrl = (inflight = new AbortController());
   const stale = () => ctrl !== inflight;
   let failed = false;
+  const turn = { user: message, calls: [] };
   $("msg").value = "";
   $("cancel-notice").classList.remove("visible");
   thinking(true);
   resetOutput();
   headline(message);
   try {
-    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message }), signal: ctrl.signal });
-    const body = await res.json().catch(() => ({ error: `server ${res.status}` }));
+    const first = await askModel(message, history, ctrl.signal);
     if (stale()) return;
-    if (!res.ok) throw new Error(body.error);
-    pick("Groq", body.call, body.ms);
-    $("tool").value = body.call.tool; // mirror into the form, so the call can be edited and rerun by hand
-    renderFields(body.call.args);
-    failed = !(await runCall(body.call, stale));
+    const head = first.calls[0];
+    let todo = [{ call: head, ms: first.ms }];
+    if (head.tool === "plan") {
+      // one step at a time: each step is its own small request, so one-call models can still do several things
+      pick("Groq", head, first.ms);
+      turn.calls.push({ ...head, result: `${head.args.steps.length} steps` });
+      todo = head.args.steps.slice(0, 5).map((step) => ({ step }));
+    }
+    const drawnNow = [];
+    for (const [i, item] of todo.entries()) {
+      let { call, ms } = item;
+      if (item.step) {
+        log("ok", `step ${i + 1}/${todo.length}`, item.step);
+        const r = await askModel(item.step, [], ctrl.signal);
+        if (stale()) return;
+        ({ ms } = r);
+        call = r.calls[0];
+        if (call.tool === "plan") throw new Error(`step ${i + 1} came back as another plan`);
+      }
+      pick("Groq", call, ms);
+      $("tool").value = call.tool; // mirror into the form, so the call can be edited and rerun by hand
+      renderFields(call.args);
+      const out = await runCall(call, stale, false);
+      turn.calls.push({ ...call, result: out.result });
+      drawnNow.push(...out.feats);
+      if (!out.ok) {
+        failed = true;
+        break;
+      }
+    }
+    if (!stale()) fitTo(drawnNow);
   } catch (err) {
     if (!stale()) log("bad", "error", err.message), settleSoon(), (failed = true);
   } finally {
     if (!stale()) {
+      if (turn.calls.length) remember(turn);
       inflight = null;
       thinking(false);
       tabState(failed ? "error" : "done", message);
@@ -454,32 +530,35 @@ async function ask(e) {
   }
 }
 
-async function runCall(call, stale = () => false) {
-  const ctx = { ...baseCtx, log: (...a) => stale() || log(...a), chart: (p) => stale() || chart(p), result: (...a) => stale() || result(...a) };
+// runs one call; returns {ok, result, feats} so a turn can be remembered and a plan can fit the map once at the end
+async function runCall(call, stale = () => false, fit = true) {
+  let last = "";
+  const ctx = {
+    ...baseCtx,
+    log: (...a) => stale() || log(...a),
+    chart: (p) => stale() || chart(p),
+    result: (text, status) => stale() || ((last = text), result(text, status)),
+    suggest: (list) => stale() || suggest(list),
+  };
   if (!validate[call.tool]?.(call.args)) {
     ctx.log("bad", "schema", "The model's call does not fit the tool", validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`);
     settleSoon();
-    return false;
+    return { ok: false, result: "the call did not fit the tool", feats: [] };
   }
   $("run").disabled = true;
   stopSpin();
   try {
     const feats = await execute(call, ctx);
-    if (stale()) return false;
+    if (stale()) return { ok: false, result: "", feats: [] };
     for (const f of feats) f.properties.fid = nextFid++;
     drawn.push(...feats);
     refresh();
-    if (feats.length) {
-      const [w, s, e2, n] = bbox({ type: "FeatureCollection", features: feats });
-      const flight = { curve: 1.6, speed: 1.1, maxDuration: 6000 }; // a far jump pulls out to the globe and arcs across
-      if (w === e2 && s === n) map.flyTo({ center: [w, s], zoom: Math.max(map.getZoom(), 12), ...flight });
-      else map.fitBounds([w, s, e2, n], { padding: 60, maxZoom: 14, ...flight });
-    }
-    return true;
+    if (fit) fitTo(feats);
+    return { ok: true, result: last, feats };
   } catch (err) {
     ctx.log("bad", "error", err.message, err.raw);
     settleSoon();
-    return false;
+    return { ok: false, result: `failed: ${err.message}`, feats: [] };
   } finally {
     $("run").disabled = false;
   }
@@ -492,6 +571,7 @@ $("form").addEventListener("submit", run);
 $("chat").addEventListener("submit", ask);
 $("clear").addEventListener("click", () => {
   drawn = [];
+  history = []; // a clean map is a fresh conversation
   selectedFid = 0;
   refresh();
   resetOutput();

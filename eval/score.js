@@ -65,6 +65,7 @@ const FIELDS = {
   elevation_profile: { waypoints: sameTrip, profile: (a, b) => a === b },
   boundary: { place: samePlace },
   reply: {},
+  plan: { steps: (a, b) => Array.isArray(a) && a.length === b.length },
 };
 
 function bufferPairs(args) {

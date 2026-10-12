@@ -52,12 +52,29 @@ function store(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
+// set once the user shares their location, so the model can be told "@me" works
+export let knownMe = null;
+
+// the place under the map's center, for the model's context; cached on a ~5 km grid
+export async function placeNear([lon, lat]) {
+  const key = `near:${lat.toFixed(2)},${lon.toFixed(2)}`;
+  let hit = cached(key);
+  if (!hit) {
+    const body = await politeFetch(PHOTON, `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=1`);
+    const p = body?.features?.[0]?.properties;
+    hit = p ? [p.name, p.city ?? p.county, p.state, p.country].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(", ") : "";
+    store(key, hit);
+  }
+  return hit;
+}
+
 // name -> { coord: [lon, lat], label }
 async function geocode(name, ctx) {
   if (name === "@me") {
     const pos = await new Promise((ok, fail) => navigator.geolocation.getCurrentPosition(ok, fail, { timeout: 15000 }))
       .catch((e) => { throw new Error(`location: ${e.message}`); });
     const coord = [pos.coords.longitude, pos.coords.latitude];
+    knownMe = coord;
     ctx.log("ok", "location", `@me → ${fmt(coord)}`);
     return { coord, label: "you" };
   }
@@ -210,6 +227,7 @@ export async function execute(call, ctx) {
       return ctx.mapAction(a);
     case "reply":
       ctx.result(a.text, a.kind === "chat" ? "ok" : "warn");
+      if (a.suggestions?.length) ctx.suggest(a.suggestions);
       return [];
   }
   throw new Error(`unknown tool ${call.tool}`);

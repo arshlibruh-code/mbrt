@@ -14,7 +14,13 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv from "ajv";
-import { TOOLS, SYSTEM } from "./tools.js";
+import { TOOLS, SYSTEM, chatMessages } from "./tools.js";
+
+// for adapters that take one prompt string: earlier turns written out as text
+const withHistory = (prompt, history = []) =>
+  history.length
+    ? `${history.map((t) => `Earlier the user said: "${t.user}". You called ${t.calls.map((c) => `${c.tool} ${JSON.stringify(c.args)} (result: ${c.result})`).join(", ")}.`).join("\n")}\nNow the user says: ${prompt}`
+    : prompt;
 import { score } from "./score.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -46,7 +52,7 @@ if (ONLY) golden = golden.filter((g) => ONLY.includes(g.id));
 async function anthropicAdapter() {
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const client = new Anthropic();
-  return async (prompt) => {
+  return async (prompt, history) => {
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 1024,
@@ -54,7 +60,7 @@ async function anthropicAdapter() {
       thinking: { type: "disabled" },
       output_config: { effort: EFFORT },
       tools: TOOLS.map((t) => ({ ...t, strict: true })),
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: withHistory(prompt, history) }],
     });
     const use = res.content.find((b) => b.type === "tool_use");
     const text = res.content.filter((b) => b.type === "text").map((b) => b.text).join(" ");
@@ -72,7 +78,7 @@ async function groqAdapter(model) {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("GROQ_API_KEY is not set");
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
-  return async (prompt) => {
+  return async (prompt, history) => {
     for (let attempt = 0; ; attempt++) {
       const t0 = Date.now();
       let res;
@@ -87,7 +93,7 @@ async function groqAdapter(model) {
             tool_choice: "required",
             parallel_tool_calls: false,
             tools,
-            messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }],
+            messages: chatMessages({ message: prompt, history }), // the exact shape the app server sends
           }),
         });
       } catch (err) {
@@ -138,12 +144,12 @@ async function codexAdapter(model) {
   const schemaFile = path.join(dir, "schema.json");
   fs.writeFileSync(schemaFile, JSON.stringify(codexSchema()));
   let n = 0;
-  return (prompt) => new Promise((resolve) => {
+  return (prompt, history) => new Promise((resolve) => {
     const out = path.join(dir, `out-${n++}.json`);
     const argv = ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only", "-C", dir,
       "-c", `model_reasoning_effort="${EFFORT}"`, "--output-schema", schemaFile, "-o", out];
     if (model) argv.push("-m", model);
-    argv.push(`${SYSTEM}\nDo not run any commands or read files. Pick the tool call for this message:\n\n${prompt}`);
+    argv.push(`${SYSTEM}\nDo not run any commands or read files. Pick the tool call for this message:\n\n${withHistory(prompt, history)}`);
     const child = execFile("codex", argv, { timeout: 180000 }, (err, _stdout, stderr) => {
       let call = null, raw = "";
       try {
@@ -211,7 +217,7 @@ async function run() {
       const t0 = Date.now();
       let r;
       try {
-        r = await ask(g.prompt);
+        r = await ask(g.prompt, g.history);
       } catch (err) {
         r = { call: null, inTok: 0, outTok: 0, raw: `error: ${err.status ?? ""} ${err.message}` };
       }
