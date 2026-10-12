@@ -34,28 +34,6 @@ const STYLES = {
     },
     layers: [{ id: "sat", type: "raster", source: "sat" }, { id: "sat-labels", type: "raster", source: "labels" }],
   },
-  // the open option: Sentinel-2 at 10 m (sharp to about city level) with EOX's OpenStreetMap labels
-  s2: {
-    version: 8,
-    glyphs: GLYPHS,
-    sources: {
-      s2: {
-        type: "raster",
-        tileSize: 256,
-        maxzoom: 15,
-        tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg"],
-        attribution: '<a href="https://cloudless.eox.at" target="_blank" rel="noopener">EOxCloudless</a> by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024)',
-      },
-      overlay: {
-        type: "raster",
-        tileSize: 256,
-        maxzoom: 14,
-        tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/overlay_bright_3857/default/g/{z}/{y}/{x}.png"],
-        attribution: "labels © EOX",
-      },
-    },
-    layers: [{ id: "s2", type: "raster", source: "s2" }, { id: "s2-labels", type: "raster", source: "overlay" }],
-  },
 };
 // atmosphere, from the portfolio globe: a halo that fades out as you zoom in
 const SKY = {
@@ -114,7 +92,7 @@ function tabState(state, text = "") {
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
 // one button that cycles the basemap; it shows the current one
-const BASEMAPS = ["satellite", "s2", "dark", "street"], SHORT = { satellite: "SAT", s2: "S2", dark: "DARK", street: "MAP" };
+const BASEMAPS = ["satellite", "dark", "street"], SHORT = { satellite: "SAT", dark: "DARK", street: "MAP" };
 const nextBasemap = (name) => BASEMAPS[(BASEMAPS.indexOf(name) + 1) % BASEMAPS.length];
 let basemap = "satellite";
 function setBasemap(name) {
@@ -127,7 +105,7 @@ map.addControl({
   onAdd() {
     const div = document.createElement("div");
     div.className = "maplibregl-ctrl maplibregl-ctrl-group";
-    div.innerHTML = `<button type="button" class="basemap-btn" title="basemap: satellite, click for s2">SAT</button>`;
+    div.innerHTML = `<button type="button" class="basemap-btn" title="basemap: satellite, click for dark">SAT</button>`;
     div.firstChild.addEventListener("click", () => setBasemap(nextBasemap(basemap)));
     return div;
   },
@@ -519,3 +497,6 @@ $("clear").addEventListener("click", () => {
   resetOutput();
 });
 renderFields();
+
+// dev only: lets a test script drive the map (stripped from builds)
+if (import.meta.env.DEV) window.mbrt = { map, setBasemap, stopSpin };
