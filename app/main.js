@@ -335,9 +335,9 @@ function describe({ tool, args: a }) {
   return tool;
 }
 // the pick in words; clicking it unfolds the exact JSON
-function pick(source, call, ms) {
+function pick(source, call, ms, model) {
   const li = line("pick", source, `${describe(call)}${ms ? `   ${ms} ms` : ""}`);
-  const json = line("json", "", JSON.stringify(call));
+  const json = line("json", "", `${JSON.stringify(call)}${model ? `   ${model} on Groq` : ""}`);
   li.addEventListener("click", () => json.classList.toggle("open"));
 }
 
@@ -446,7 +446,7 @@ function run(e) {
 // ---- memory and context: the last 3 turns and what the map shows go with every message
 
 let history = [];
-const remember = (turn) => (history = [...history, turn].slice(-3));
+const remember = (turn) => ((history = [...history, turn].slice(-3)), hints.followUp(turn));
 
 async function viewContext() {
   const zoom = map.getZoom(), sel = baseCtx.selected();
@@ -532,11 +532,84 @@ $("msg").addEventListener("focus", () => fx.focus(true));
 $("msg").addEventListener("blur", () => fx.focus(false));
 
 
+// ---- the bar's placeholder: real requests typed in with a decode effect, local to the map view,
+// follow-ups after a result, and Tab takes the one shown
+
+const hints = (() => {
+  const GLYPHS = "#/\\|<>[]=+*-_01";
+  const golden0 = golden.filter((g) => g.id.startsWith("g") && !/@|this|here/.test(g.prompt)).map((g) => g.prompt);
+  const FOLLOW = {
+    route: ["now walking", "elevation of that", "clear the map"],
+    isochrone: ["same but cycling", "and 15 minutes too"],
+    buffer: ["make it 5 km", "clear the buffers"],
+    markers: ["route there from Bengaluru", "10 km buffer around it"],
+    line: ["now as a road route"],
+    polygon: ["clear the map"],
+    elevation_profile: ["switch to 3D terrain"],
+    boundary: ["switch to satellite"],
+  };
+  let queue = [], shown = "", full = "", timer = 0, paused = false;
+  const el = $("msg");
+  const pickNext = async () => {
+    if (!queue.length) {
+      const near = map.getZoom() >= 5 ? await placeNear(map.getCenter().toArray()).catch(() => "") : "";
+      const town = near.split(",").slice(0, 2).join(",").trim();
+      const local = town ? [`15 min walk from ${town}`, `5 km buffer around ${town}`, `where is ${town}`] : [];
+      queue = [...local, ...golden0.sort(() => Math.random() - 0.5).slice(0, 6)];
+    }
+    return queue.shift();
+  };
+  const render = (txt) => (el.placeholder = txt + (document.activeElement === el && txt === full ? "   [tab]" : ""));
+  async function cycle() {
+    clearTimeout(timer);
+    if (paused) return;
+    full = await pickNext();
+    // type on: each new letter arrives as a scrambled glyph for a moment, then resolves
+    for (let i = 1; i <= full.length && !paused; i++) {
+      shown = full.slice(0, i);
+      const tail = full.length - i > 0 ? GLYPHS[(Math.random() * GLYPHS.length) | 0] : "";
+      render(shown + tail);
+      await new Promise((r) => (timer = setTimeout(r, 34)));
+    }
+    if (paused) return;
+    render(full);
+    await new Promise((r) => (timer = setTimeout(r, 2600)));
+    for (let i = full.length; i >= 0 && !paused; i--) {
+      render(full.slice(0, i));
+      await new Promise((r) => (timer = setTimeout(r, 14)));
+    }
+    if (!paused) timer = setTimeout(cycle, 300);
+  }
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Tab" && !el.value && full && el.placeholder.startsWith(full)) {
+      e.preventDefault();
+      el.value = full;
+      fx.key(caretX());
+    }
+  });
+  el.addEventListener("focus", () => render(shown === full ? full : shown));
+  el.addEventListener("blur", () => render(shown));
+  return {
+    pause() { paused = true; clearTimeout(timer); },
+    resume() { if (!paused) return; paused = false; queue.length ? cycle() : timer = setTimeout(cycle, 600); },
+    // after a result, the next hints are the natural follow-ups
+    followUp(turn) {
+      const last = turn.calls.at(-1);
+      const fromReply = last?.tool === "reply" ? last.args.suggestions ?? [] : [];
+      queue = [...fromReply, ...(FOLLOW[last?.tool] ?? [])];
+    },
+    start: cycle,
+  };
+})();
+hints.start();
+
 const thinking = (on) => {
+  if (on) hints.pause();
+  else hints.resume();
   if (on) tabState("thinking"), fx.state("thinking");
   $("msg").classList.toggle("thinking", on);
   $("msg").closest(".field").classList.toggle("thinking", on);
-  $("msg").placeholder = on ? "Thinking..." : "Ask the map anything";
+  if (on) $("msg").placeholder = "Theo is thinking...";
   if (!on) $("cancel-notice").classList.remove("visible");
 };
 $("msg").addEventListener("input", () => $("cancel-notice").classList.toggle("visible", !!inflight && $("msg").value !== ""));
@@ -563,7 +636,7 @@ async function ask(e) {
     let todo = [{ call: head, ms: first.ms }];
     if (head.tool === "plan") {
       // one step at a time: each step is its own small request, so one-call models can still do several things
-      pick("Groq", head, first.ms);
+      pick("Theo", head, first.ms, first.model);
       turn.calls.push({ ...head, result: `${head.args.steps.length} steps` });
       todo = head.args.steps.slice(0, 5).map((step) => ({ step }));
     }
@@ -575,11 +648,12 @@ async function ask(e) {
         const r = await askModel(item.step, [], ctrl.signal);
         if (stale()) return;
         ({ ms } = r);
+        item.model = r.model;
         call = r.calls[0];
         if (call.tool === "plan") throw new Error(`step ${i + 1} came back as another plan`);
       }
       const fixes = repairPlaces(call, item.step ?? message);
-      pick("Groq", call, ms);
+      pick("Theo", call, ms, item.model ?? first.model);
       if (fixes.length) log("warn", "fixed", `model misspelled ${fixes.join(", ")}`);
       $("tool").value = call.tool; // mirror into the form, so the call can be edited and rerun by hand
       renderFields(call.args);

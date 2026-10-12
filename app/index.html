@@ -105,7 +105,7 @@
     #msg { width: 100%; padding: 0; font: 700 30px var(--font); text-transform: uppercase; text-align: center;
       color: white; background: transparent; border: 0; outline: none; transition: color 0.3s; }
     #msg::placeholder { color: rgba(255, 255, 255, 0.6); opacity: 0.5; }
-    #msg:focus::placeholder, #msg:not(:placeholder-shown)::placeholder { opacity: 0; }
+    #msg:focus::placeholder { opacity: 0.28; } /* still shows the example, so Tab can take it */
     #msg.thinking, #msg.thinking::placeholder { color: #089bdf7e; opacity: 1; }
     #msg.shake { animation: shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
     @keyframes shake { 15% { transform: translateX(-10px); } 30% { transform: translateX(8px); } 45% { transform: translateX(-5px); } 60% { transform: translateX(3px); } 75% { transform: translateX(-1px); } 100% { transform: none; } }
