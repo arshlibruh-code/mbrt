@@ -106,7 +106,7 @@
 
     /* credits: one line of small text above the bar */
     #map .maplibregl-ctrl-bottom-right { bottom: calc(var(--bar-h) + 4px); }
-    #map .maplibregl-ctrl.maplibregl-ctrl-attrib { background: none; margin: 0 10px 6px; padding: 0; font: 9px/1.4 var(--font); color: var(--ink2); text-shadow: 0 0 4px #000, 0 0 2px #000; }
+    #map .maplibregl-ctrl.maplibregl-ctrl-attrib { background: none; margin: 0 10px 6px; padding: 0; font: 8px/1.4 var(--font); color: rgba(233, 235, 237, 0.4); text-shadow: 0 0 3px #000; }
     #map .maplibregl-ctrl-attrib a { color: inherit; }
     #map .maplibregl-ctrl-attrib-button { display: none; }
     /* zoom and compass in the same glass as everything else */
@@ -122,7 +122,9 @@
     #map .maplibregl-ctrl-group .basemap-btn { font: 700 9px var(--font); letter-spacing: 0.08em; color: var(--ink); }
     #map .maplibregl-ctrl-bottom-left { bottom: calc(var(--bar-h) + 4px); }
     #map .maplibregl-ctrl.maplibregl-ctrl-scale { background: none; margin: 0 0 6px 12px; padding: 0 4px; border: 1px solid var(--ink2); border-top: 0;
-      font: 9px/1.6 var(--font); color: var(--ink); text-shadow: 0 0 4px #000, 0 0 2px #000; }
+      font: 9px/1.6 var(--font); color: var(--ink); text-shadow: 0 0 4px #000, 0 0 2px #000; transition: opacity 0.4s; }
+    /* on the zoomed-out globe one scale bar is only true at the center, so it shows from zoom 5 */
+    body.globe-view #map .maplibregl-ctrl-scale { opacity: 0; }
 
     @media (max-width: 700px) {
       #chat { padding: 3vh 16px calc(3vh + env(safe-area-inset-bottom)); }

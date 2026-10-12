@@ -134,6 +134,9 @@ map.addControl({
   onRemove() {},
 }, "top-right");
 map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 110 }), "bottom-left");
+const syncScale = () => document.body.classList.toggle("globe-view", map.getZoom() < 5);
+map.on("zoom", syncScale);
+syncScale();
 
 // ---- idle spin: on load and after 20 s untouched the globe turns east; any touch or typing stops it.
 // Speed is in degrees per second (same on any refresh rate) and eases in; it only turns the zoomed-out globe.
