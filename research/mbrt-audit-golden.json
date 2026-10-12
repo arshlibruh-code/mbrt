@@ -1,0 +1,854 @@
+[
+  {
+    "id": "g01",
+    "prompt": "where is Hampi",
+    "category": "point",
+    "expected": {
+      "tool": "add_markers",
+      "args": {
+        "places": [
+          "Hampi, Karnataka"
+        ]
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": true
+  },
+  {
+    "id": "g02",
+    "prompt": "show me Gateway of India",
+    "category": "point",
+    "expected": {
+      "tool": "add_markers",
+      "args": {
+        "places": [
+          "Gateway of India, Mumbai"
+        ]
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": true
+  },
+  {
+    "id": "g03",
+    "prompt": "locate Charminar",
+    "category": "point",
+    "expected": {
+      "tool": "add_markers",
+      "args": {
+        "places": [
+          "Charminar, Hyderabad"
+        ]
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": true
+  },
+  {
+    "id": "g04",
+    "prompt": "find Kedarnath temple",
+    "category": "point",
+    "expected": {
+      "tool": "add_markers",
+      "args": {
+        "places": [
+          "Kedarnath Temple, Uttarakhand"
+        ]
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": true
+  },
+  {
+    "id": "g05",
+    "prompt": "coordinates of the Eiffel Tower",
+    "category": "point",
+    "expected": {
+      "tool": "add_markers",
+      "args": {
+        "places": [
+          "Eiffel Tower, Paris"
+        ]
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": true
+  },
+  {
+    "id": "g06",
+    "prompt": "show me Bengaluru, Mysuru, Coorg",
+    "category": "point",
+    "expected": {
+      "tool": "add_markers",
+      "args": {
+        "places": [
+          "Bengaluru",
+          "Mysuru",
+          "Coorg (Kodagu)"
+        ]
+      }
+    },
+    "current_classifier": "point/multiple",
+    "current_ok": true
+  },
+  {
+    "id": "g07",
+    "prompt": "top 5 places to visit in Jaipur",
+    "category": "point",
+    "expected": {
+      "tool": "add_markers",
+      "args": {
+        "places": "5 Jaipur landmarks chosen by the model, e.g. Hawa Mahal, Amber Fort, City Palace, Jantar Mantar, Nahargarh Fort",
+        "count": 5
+      }
+    },
+    "current_classifier": "point/multiple",
+    "current_ok": true,
+    "known_issue": "model must invent the list; extraction is free-text coordinate scraping"
+  },
+  {
+    "id": "g08",
+    "prompt": "route from Bengaluru to Mysuru",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "Bengaluru",
+          "Mysuru"
+        ],
+        "profile": "driving"
+      }
+    },
+    "current_classifier": "line/route-single",
+    "current_ok": true
+  },
+  {
+    "id": "g09",
+    "prompt": "driving directions from Mumbai to Pune",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "Mumbai",
+          "Pune"
+        ],
+        "profile": "driving"
+      }
+    },
+    "current_classifier": "line/route-single",
+    "current_ok": true
+  },
+  {
+    "id": "g10",
+    "prompt": "walking route from India Gate to Rashtrapati Bhavan",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "India Gate, New Delhi",
+          "Rashtrapati Bhavan, New Delhi"
+        ],
+        "profile": "walking"
+      }
+    },
+    "current_classifier": "line/route-single",
+    "current_ok": true
+  },
+  {
+    "id": "g11",
+    "prompt": "cycling route from Cubbon Park to Lalbagh",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "Cubbon Park, Bengaluru",
+          "Lalbagh, Bengaluru"
+        ],
+        "profile": "cycling"
+      }
+    },
+    "current_classifier": "line/route-single",
+    "current_ok": true
+  },
+  {
+    "id": "g12",
+    "prompt": "route from Delhi to Agra via Mathura",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "Delhi",
+          "Mathura",
+          "Agra"
+        ],
+        "profile": "driving"
+      }
+    },
+    "current_classifier": "line/route-multi",
+    "current_ok": true
+  },
+  {
+    "id": "g13",
+    "prompt": "route from Chennai to Puducherry through Mahabalipuram",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "Chennai",
+          "Mahabalipuram",
+          "Puducherry"
+        ],
+        "profile": "driving"
+      }
+    },
+    "current_classifier": "line/route-multi",
+    "current_ok": true
+  },
+  {
+    "id": "g14",
+    "prompt": "how to get from Kochi to Munnar",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "Kochi",
+          "Munnar"
+        ],
+        "profile": "driving"
+      }
+    },
+    "current_classifier": "line/route-single",
+    "current_ok": true
+  },
+  {
+    "id": "g15",
+    "prompt": "distance between Hyderabad and Vijayawada",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "Hyderabad",
+          "Vijayawada"
+        ],
+        "profile": "driving",
+        "report": "distance_km"
+      }
+    },
+    "current_classifier": "line/direct-single",
+    "current_ok": false,
+    "known_issue": "classified direct-single: draws a straight line, not a route, and distance is never shown (only console.log)"
+  },
+  {
+    "id": "g16",
+    "prompt": "show me route from San Francisco to Los Angeles",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "San Francisco",
+          "Los Angeles"
+        ],
+        "profile": "driving"
+      }
+    },
+    "current_classifier": "line/route-single",
+    "current_ok": true
+  },
+  {
+    "id": "g17",
+    "prompt": "route from Bengaluru to Goa via Hubli, Belagavi and Dharwad",
+    "category": "route",
+    "expected": {
+      "tool": "route",
+      "args": {
+        "waypoints": [
+          "Bengaluru",
+          "Hubli",
+          "Dharwad",
+          "Belagavi",
+          "Goa"
+        ],
+        "profile": "driving",
+        "note": "5 waypoints; tests Directions waypoint cap on driving-traffic"
+      }
+    },
+    "current_classifier": "line/route-multi",
+    "current_ok": true,
+    "known_issue": "5 waypoints on mapbox/driving-traffic; on Directions error it silently falls back to a straight line (lineAgent.js:275-279)"
+  },
+  {
+    "id": "g18",
+    "prompt": "draw a line connecting Delhi, Jaipur, Udaipur",
+    "category": "line",
+    "expected": {
+      "tool": "draw_line",
+      "args": {
+        "places": [
+          "Delhi",
+          "Jaipur",
+          "Udaipur"
+        ]
+      }
+    },
+    "current_classifier": "polygon/single",
+    "current_ok": false,
+    "known_issue": "misrouted to polygon: 3+ comma default treats \"connecting\" as a polygon hint while the line hint regex \\bconnect\\b misses \"connecting\" (queryDetector.js:275-287)"
+  },
+  {
+    "id": "g19",
+    "prompt": "connect Mumbai with a line to Goa",
+    "category": "line",
+    "expected": {
+      "tool": "draw_line",
+      "args": {
+        "places": [
+          "Mumbai",
+          "Goa"
+        ]
+      }
+    },
+    "current_classifier": "line/direct-single",
+    "current_ok": true
+  },
+  {
+    "id": "g20",
+    "prompt": "draw a straight line between Kanyakumari and Srinagar",
+    "category": "line",
+    "expected": {
+      "tool": "draw_line",
+      "args": {
+        "places": [
+          "Kanyakumari",
+          "Srinagar"
+        ]
+      }
+    },
+    "current_classifier": "line/direct-single",
+    "current_ok": true
+  },
+  {
+    "id": "g21",
+    "prompt": "chain of Taj Mahal, Agra Fort, Fatehpur Sikri",
+    "category": "line",
+    "expected": {
+      "tool": "draw_line",
+      "args": {
+        "places": [
+          "Taj Mahal",
+          "Agra Fort",
+          "Fatehpur Sikri"
+        ]
+      }
+    },
+    "current_classifier": "line/direct-multi",
+    "current_ok": true
+  },
+  {
+    "id": "g22",
+    "prompt": "add 10 km buffer around Connaught Place",
+    "category": "buffer",
+    "expected": {
+      "tool": "buffer",
+      "args": {
+        "centers": [
+          "Connaught Place, New Delhi"
+        ],
+        "radius_km": 10
+      }
+    },
+    "current_classifier": "buffer/single",
+    "current_ok": true
+  },
+  {
+    "id": "g23",
+    "prompt": "create a 5 km geofence around Kempegowda airport",
+    "category": "buffer",
+    "expected": {
+      "tool": "buffer",
+      "args": {
+        "centers": [
+          "Kempegowda International Airport, Bengaluru"
+        ],
+        "radius_km": 5
+      }
+    },
+    "current_classifier": "buffer/single",
+    "current_ok": true
+  },
+  {
+    "id": "g24",
+    "prompt": "500 m radius around Marine Drive Mumbai",
+    "category": "buffer",
+    "expected": {
+      "tool": "buffer",
+      "args": {
+        "centers": [
+          "Marine Drive, Mumbai"
+        ],
+        "radius_km": 0.5
+      }
+    },
+    "current_classifier": "isochrone/single",
+    "current_ok": false,
+    "known_issue": "misrouted to isochrone: \"m radius\" is an isochrone indicator (queryDetector.js:96) and is checked before buffer"
+  },
+  {
+    "id": "g25",
+    "prompt": "show a 2 mile perimeter around Central Park",
+    "category": "buffer",
+    "expected": {
+      "tool": "buffer",
+      "args": {
+        "centers": [
+          "Central Park, New York"
+        ],
+        "radius_km": 3.219
+      }
+    },
+    "current_classifier": "buffer/single",
+    "current_ok": true
+  },
+  {
+    "id": "g26",
+    "prompt": "20 km on Dehradun, 35 km on Haldwani buffers",
+    "category": "buffer",
+    "expected": {
+      "tool": "buffer",
+      "args": {
+        "centers": [
+          "Dehradun",
+          "Haldwani"
+        ],
+        "radius_km": [
+          20,
+          35
+        ]
+      }
+    },
+    "current_classifier": "line/direct-single",
+    "current_ok": false,
+    "known_issue": "misrouted to line: no buffer keyword in singular form before the comma split; the per-location radius regex only runs inside bufferAgent"
+  },
+  {
+    "id": "g27",
+    "prompt": "15 km buffer around Pune, Nashik and Aurangabad",
+    "category": "buffer",
+    "expected": {
+      "tool": "buffer",
+      "args": {
+        "centers": [
+          "Pune",
+          "Nashik",
+          "Aurangabad (Chhatrapati Sambhajinagar)"
+        ],
+        "radius_km": 15
+      }
+    },
+    "current_classifier": "buffer/multiple",
+    "current_ok": true
+  },
+  {
+    "id": "g28",
+    "prompt": "add 50km buffer around this point",
+    "category": "buffer",
+    "expected": {
+      "tool": "buffer",
+      "args": {
+        "centers": [
+          "<selected feature>"
+        ],
+        "radius_km": 50,
+        "precondition": "a marker selected via @feature"
+      }
+    },
+    "current_classifier": "buffer/single",
+    "current_ok": true
+  },
+  {
+    "id": "g29",
+    "prompt": "10 km buffer around Delhi, Gurugram and Noida",
+    "category": "buffer",
+    "expected": {
+      "tool": "buffer",
+      "args": {
+        "centers": [
+          "Delhi",
+          "Gurugram",
+          "Noida"
+        ],
+        "radius_km": 10,
+        "note": "centers within 0.5 deg of each other; tests the dedupe clustering"
+      }
+    },
+    "current_classifier": "buffer/multiple",
+    "current_ok": true,
+    "known_issue": "centers within 0.5 deg get clustered into one buffer (bufferAgent.js:204-237); expected count regex sees 1 location"
+  },
+  {
+    "id": "g30",
+    "prompt": "30 min drive isochrone from Koramangala",
+    "category": "isochrone",
+    "expected": {
+      "tool": "isochrone",
+      "args": {
+        "center": "Koramangala, Bengaluru",
+        "profile": "driving",
+        "contours_minutes": [
+          30
+        ]
+      }
+    },
+    "current_classifier": "isochrone/single",
+    "current_ok": true
+  },
+  {
+    "id": "g31",
+    "prompt": "show 15 min walk from Churchgate station",
+    "category": "isochrone",
+    "expected": {
+      "tool": "isochrone",
+      "args": {
+        "center": "Churchgate station, Mumbai",
+        "profile": "walking",
+        "contours_minutes": [
+          15
+        ]
+      }
+    },
+    "current_classifier": "isochrone/single",
+    "current_ok": true
+  },
+  {
+    "id": "g32",
+    "prompt": "10, 20, 30 minute cycling zones around Auroville",
+    "category": "isochrone",
+    "expected": {
+      "tool": "isochrone",
+      "args": {
+        "center": "Auroville",
+        "profile": "cycling",
+        "contours_minutes": [
+          10,
+          20,
+          30
+        ]
+      }
+    },
+    "current_classifier": "isochrone/multiple",
+    "current_ok": true
+  },
+  {
+    "id": "g33",
+    "prompt": "area reachable in 45 minutes driving from Hyderabad airport",
+    "category": "isochrone",
+    "expected": {
+      "tool": "isochrone",
+      "args": {
+        "center": "Rajiv Gandhi International Airport, Hyderabad",
+        "profile": "driving",
+        "contours_minutes": [
+          45
+        ]
+      }
+    },
+    "current_classifier": "isochrone/single",
+    "current_ok": true
+  },
+  {
+    "id": "g34",
+    "prompt": "5 km drive isochrone from Gachibowli",
+    "category": "isochrone",
+    "expected": {
+      "tool": "isochrone",
+      "args": {
+        "center": "Gachibowli, Hyderabad",
+        "profile": "driving",
+        "contours_meters": [
+          5000
+        ]
+      }
+    },
+    "current_classifier": "isochrone/single",
+    "current_ok": true
+  },
+  {
+    "id": "g35",
+    "prompt": "delivery zone 20 min from Indiranagar",
+    "category": "isochrone",
+    "expected": {
+      "tool": "isochrone",
+      "args": {
+        "center": "Indiranagar, Bengaluru",
+        "profile": "driving",
+        "contours_minutes": [
+          20
+        ]
+      }
+    },
+    "current_classifier": "isochrone/single",
+    "current_ok": true
+  },
+  {
+    "id": "g36",
+    "prompt": "1 hour drive from Shimla",
+    "category": "isochrone",
+    "expected": {
+      "tool": "isochrone",
+      "args": {
+        "center": "Shimla",
+        "profile": "driving",
+        "contours_minutes": [
+          60
+        ]
+      }
+    },
+    "current_classifier": "isochrone/single",
+    "current_ok": true
+  },
+  {
+    "id": "g37",
+    "prompt": "20 min walk isochrone from here",
+    "category": "isochrone",
+    "expected": {
+      "tool": "isochrone",
+      "args": {
+        "center": "<user location or map center>",
+        "profile": "walking",
+        "contours_minutes": [
+          20
+        ],
+        "precondition": "@my location run first, else map center"
+      }
+    },
+    "current_classifier": "isochrone/single",
+    "current_ok": true,
+    "known_issue": "depends on the LLM replying exactly \"here\" (isochroneAgent.js:64)"
+  },
+  {
+    "id": "g38",
+    "prompt": "draw polygon connecting Delhi, Jaipur and Agra",
+    "category": "polygon",
+    "expected": {
+      "tool": "polygon",
+      "args": {
+        "vertices": [
+          "Delhi",
+          "Jaipur",
+          "Agra"
+        ]
+      }
+    },
+    "current_classifier": "polygon/multiple",
+    "current_ok": true,
+    "known_issue": "subtype multiple makes polygonAgent ask the LLM for each city boundary separated by || instead of using cities as vertices (polygonAgent.js:69-75, 88-94)"
+  },
+  {
+    "id": "g39",
+    "prompt": "create a triangle from Mumbai, Pune and Nashik",
+    "category": "polygon",
+    "expected": {
+      "tool": "polygon",
+      "args": {
+        "vertices": [
+          "Mumbai",
+          "Pune",
+          "Nashik"
+        ]
+      }
+    },
+    "current_classifier": "polygon/multiple",
+    "current_ok": true,
+    "known_issue": "same as g38"
+  },
+  {
+    "id": "g40",
+    "prompt": "make a polygon using Chennai, Bengaluru, Hyderabad, Mumbai locations",
+    "category": "polygon",
+    "expected": {
+      "tool": "polygon",
+      "args": {
+        "vertices": [
+          "Chennai",
+          "Bengaluru",
+          "Hyderabad",
+          "Mumbai"
+        ]
+      }
+    },
+    "current_classifier": "polygon/multiple",
+    "current_ok": true,
+    "known_issue": "same as g38"
+  },
+  {
+    "id": "g41",
+    "prompt": "show boundary of Goa",
+    "category": "polygon",
+    "expected": {
+      "tool": "admin_boundary",
+      "args": {
+        "place": "Goa (state)",
+        "note": "today the LLM invents the outline; needs a real boundary source or an honest refusal"
+      }
+    },
+    "current_classifier": "polygon/single",
+    "current_ok": true,
+    "known_issue": "boundary coordinates are invented by the LLM; no boundary dataset"
+  },
+  {
+    "id": "g42",
+    "prompt": "show elevation profile",
+    "category": "elevation",
+    "expected": {
+      "tool": "elevation_profile",
+      "args": {
+        "line": "<selected line>",
+        "precondition": "a route or line selected via @feature"
+      }
+    },
+    "current_classifier": "elevation/single",
+    "current_ok": true,
+    "known_issue": "fast path skips the LLM only when a line is selected (app.js:420-444)"
+  },
+  {
+    "id": "g43",
+    "prompt": "elevation profile from Manali to Leh",
+    "category": "elevation",
+    "expected": {
+      "tool": "elevation_profile",
+      "args": {
+        "line": {
+          "route": {
+            "waypoints": [
+              "Manali",
+              "Leh"
+            ],
+            "profile": "driving"
+          }
+        }
+      }
+    },
+    "current_classifier": "elevation/single",
+    "current_ok": true,
+    "known_issue": "no routing: only works if the first LLM reply happens to contain 2+ coordinates; profile is along straight segments and the line itself is not drawn (elevationAgent.js:55-86)"
+  },
+  {
+    "id": "g44",
+    "prompt": "terrain profile from Rishikesh to Kedarnath",
+    "category": "elevation",
+    "expected": {
+      "tool": "elevation_profile",
+      "args": {
+        "line": {
+          "route": {
+            "waypoints": [
+              "Rishikesh",
+              "Kedarnath"
+            ],
+            "profile": "driving"
+          }
+        }
+      }
+    },
+    "current_classifier": "elevation/single",
+    "current_ok": true,
+    "known_issue": "same as g43"
+  },
+  {
+    "id": "g45",
+    "prompt": "switch to satellite view",
+    "category": "map_control",
+    "expected": {
+      "tool": "set_style",
+      "args": {
+        "style": "satellite",
+        "today": "@satellite"
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": false,
+    "known_issue": "natural language map control is not supported; only @commands. This goes to the LLM point workflow"
+  },
+  {
+    "id": "g46",
+    "prompt": "zoom to level 10",
+    "category": "map_control",
+    "expected": {
+      "tool": "set_zoom",
+      "args": {
+        "zoom": 10,
+        "today": "@zoom 10 (parses as zoom out)"
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": false,
+    "known_issue": "@zoom 10 parses as \"zoom out\" (commands.js:802-834 prefix match on alias zo)"
+  },
+  {
+    "id": "g47",
+    "prompt": "center the map on 12.9716, 77.5946",
+    "category": "map_control",
+    "expected": {
+      "tool": "center_map",
+      "args": {
+        "lat": 12.9716,
+        "lon": 77.5946,
+        "today": "@center 12.9716,77.5946"
+      }
+    },
+    "current_classifier": "line/direct-single",
+    "current_ok": false,
+    "known_issue": "NL goes to LLM line workflow; @center works"
+  },
+  {
+    "id": "g48",
+    "prompt": "turn on 3D terrain",
+    "category": "map_control",
+    "expected": {
+      "tool": "toggle_terrain",
+      "args": {
+        "today": "@terrain"
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": false,
+    "known_issue": "NL goes to LLM point workflow; @terrain works"
+  },
+  {
+    "id": "g49",
+    "prompt": "clear all the buffers",
+    "category": "map_control",
+    "expected": {
+      "tool": "clear",
+      "args": {
+        "what": "buffers",
+        "today": "@clean buffers"
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": false,
+    "known_issue": "NL goes to LLM point workflow; @clean buffers works, @cl buffers wipes everything"
+  },
+  {
+    "id": "g50",
+    "prompt": "show my current location",
+    "category": "map_control",
+    "expected": {
+      "tool": "my_location",
+      "args": {
+        "today": "@my location"
+      }
+    },
+    "current_classifier": "point/single",
+    "current_ok": false,
+    "known_issue": "NL goes to LLM point workflow; @my location works, @location switches to light style"
+  }
+]
