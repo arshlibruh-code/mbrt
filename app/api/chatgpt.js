@@ -146,6 +146,7 @@ async function chat(req, res) {
   const chunks = [];
   for await (const c of req) chunks.push(c);
   const { message, history, context, model } = JSON.parse(Buffer.concat(chunks) || "{}");
+  if (typeof message !== "string" || !message.trim() || message.length > 500) return json(res, 400, { error: "message must be 1 to 500 characters" });
   const t0 = Date.now();
   const r = await fetch(`${API}/responses`, {
     method: "POST",
@@ -163,6 +164,13 @@ async function chat(req, res) {
 // mounted at /api/chatgpt by vite.config.js
 export async function handleChatgpt(req, res) {
   const path = new URL(req.url, "http://x").pathname;
+  // only our own page may use the sign-in: another site open in your browser could otherwise post here and spend
+  // your plan (it could not read the answer, but the allowance would be gone). Browsers say where a request came from.
+  const site = req.headers["sec-fetch-site"], origin = req.headers.origin;
+  if ((site && site !== "same-origin" && site !== "none") || (origin && origin !== `http://${req.headers.host}`))
+    return json(res, 403, { error: "only the mbrt page itself can use the ChatGPT sign-in" });
+  if (path === "/chat" && !String(req.headers["content-type"]).startsWith("application/json"))
+    return json(res, 415, { error: "send JSON" });
   try {
     if (path === "/login") return await login(req, res);
     if (path === "/status") {
