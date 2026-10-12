@@ -1,0 +1,561 @@
+{
+  "provenance": {
+    "name": "cubbon",
+    "url": "https://photon.komoot.io/api/?q=Cubbon%20Park%20Bengaluru&limit=20&lon=77.592&lat=12.976",
+    "method": "GET",
+    "fetchedAt": "2026-10-12T14:56:38.214Z"
+  },
+  "data": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 22895320,
+          "osm_key": "leisure",
+          "osm_value": "park",
+          "type": "other",
+          "name": "Cubbon Park",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5879274,
+            12.9803864,
+            77.5989019,
+            12.9679621
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5921906,
+            12.9742535
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 3343297219,
+          "osm_key": "railway",
+          "osm_value": "stop",
+          "type": "house",
+          "name": "Cubbon Park",
+          "street": "Cubbon Road",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.597562,
+            12.9808954
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 5760197798,
+          "osm_key": "railway",
+          "osm_value": "stop",
+          "type": "house",
+          "name": "Cubbon Park",
+          "street": "Cubbon Road",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5975758,
+            12.9809794
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 6400857555,
+          "osm_key": "railway",
+          "osm_value": "station",
+          "type": "house",
+          "name": "Cubbon Park",
+          "street": "Cubbon Road",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5975756,
+            12.9809575
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 52097326,
+          "osm_key": "landuse",
+          "osm_value": "industrial",
+          "type": "locality",
+          "name": "Cubbon Park 4MLD Sewage Treatment Planet",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5908344,
+            12.9710975,
+            77.5918324,
+            12.970212
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5913836,
+            12.9705686
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 369295570,
+          "osm_key": "landuse",
+          "osm_value": "plant_nursery",
+          "type": "other",
+          "name": "Cubbon Park Nursery",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5934741,
+            12.9750324,
+            77.5948275,
+            12.9740129
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5941432,
+            12.9745252
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 38318887,
+          "osm_key": "leisure",
+          "osm_value": "garden",
+          "type": "other",
+          "name": "Cubbon Park Circle",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5902987,
+            12.9761438,
+            77.5915823,
+            12.9748498
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5909388,
+            12.975523
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 366192432,
+          "osm_key": "highway",
+          "osm_value": "footway",
+          "type": "street",
+          "name": "Cubbon Park Nature Trail",
+          "locality": "Cubbonpet",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN",
+          "extent": [
+            77.5880441,
+            12.9738761,
+            77.5889172,
+            12.9683012
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5886336,
+            12.9713164
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 12670396699,
+          "osm_key": "amenity",
+          "osm_value": "police",
+          "type": "house",
+          "name": "Cubbon Park Traffic Police Station",
+          "street": "Kasturba Road",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5981119,
+            12.9760045
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 11097276373,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "Cubbon Park Metro Station",
+          "street": "Cunningham Road",
+          "district": "Shivajinagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5984117,
+            12.9807412
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 428843493,
+          "osm_key": "amenity",
+          "osm_value": "police",
+          "type": "house",
+          "name": "Cubbon Park Police Station",
+          "street": "Kasturba Road",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5983458,
+            12.9762399
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 4979669577,
+          "osm_key": "railway",
+          "osm_value": "subway_entrance",
+          "type": "house",
+          "name": "C: Cubbon Park",
+          "street": "Cubbon Road",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5969463,
+            12.9809639
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 913247035,
+          "osm_key": "leisure",
+          "osm_value": "dog_park",
+          "type": "house",
+          "name": "Cubbon Park Dog Park",
+          "street": "Cubbon Park Nature Trail",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN",
+          "extent": [
+            77.5896903,
+            12.9749355,
+            77.5903183,
+            12.9741096
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5900552,
+            12.9746033
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 327551781,
+          "osm_key": "amenity",
+          "osm_value": "police",
+          "type": "house",
+          "name": "Cubbon Park Police Station",
+          "street": "Kasturba Road",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN",
+          "extent": [
+            77.5979021,
+            12.9765196,
+            77.5985608,
+            12.9759173
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.59823,
+            12.9762147
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 363444103,
+          "osm_key": "building",
+          "osm_value": "yes",
+          "type": "house",
+          "name": "Cubbon Park Metro Entrance",
+          "street": "Cubbon Rd, Ambedkar Veedhi, Shivaji Nagar",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN",
+          "extent": [
+            77.5967735,
+            12.9810568,
+            77.5969609,
+            12.9809255
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.596867,
+            12.9809859
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 9161059598,
+          "osm_key": "railway",
+          "osm_value": "subway_entrance",
+          "type": "house",
+          "name": "D: Cubbon Park/RBI Side",
+          "street": "Doctor B R Ambedkar Veedhi",
+          "locality": "High Grounds",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5910052,
+            12.9776274
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 464465211,
+          "osm_key": "highway",
+          "osm_value": "primary",
+          "type": "street",
+          "name": "Cubbon Road",
+          "locality": "Craig Park Layout",
+          "district": "Ashokanagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN",
+          "extent": [
+            77.6087723,
+            12.9771223,
+            77.6143488,
+            12.9752764
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6115591,
+            12.9761948
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 685247152,
+          "osm_key": "highway",
+          "osm_value": "cycleway",
+          "type": "street",
+          "name": "Cubbon Road Cycle Path",
+          "locality": "Craig Park Layout",
+          "district": "Ashokanagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN",
+          "extent": [
+            77.6088577,
+            12.9770233,
+            77.6132005,
+            12.9756128
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6110432,
+            12.9763198
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 452414811,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "Corporation Circle (Cubbon Park)",
+          "street": "Kasturba Road",
+          "locality": "Cubbonpet",
+          "district": "Sampangirama Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5896602,
+            12.9685475
+          ]
+        }
+      }
+    ]
+  }
+}

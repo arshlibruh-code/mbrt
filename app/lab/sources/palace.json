@@ -1,0 +1,624 @@
+{
+  "provenance": {
+    "name": "palace",
+    "url": "https://photon.komoot.io/api/?q=Bangalore%20Palace&limit=20&lon=77.592&lat=12.999",
+    "method": "GET",
+    "fetchedAt": "2026-10-12T14:56:40.017Z"
+  },
+  "data": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 143384387,
+          "osm_key": "building",
+          "osm_value": "yes",
+          "type": "house",
+          "name": "Bangalore Palace",
+          "street": "Jayamahal Road",
+          "district": "Rajamahal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560006",
+          "countrycode": "IN",
+          "extent": [
+            77.5915948,
+            12.9990269,
+            77.5923804,
+            12.998188
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5920086,
+            12.9985954
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 10922526,
+          "osm_key": "landuse",
+          "osm_value": "recreation_ground",
+          "type": "other",
+          "name": "Bangalore Palace Grounds",
+          "district": "Rajamahal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5842527,
+            13.0116773,
+            77.5959786,
+            12.994916
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5897399,
+            12.9991813
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1255263482,
+          "osm_key": "building",
+          "osm_value": "retail",
+          "type": "house",
+          "name": "Palace Mall Bangalore",
+          "street": "Seppings Road",
+          "district": "Bharathi Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN",
+          "extent": [
+            77.6079248,
+            12.9864565,
+            77.6082091,
+            12.9861154
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6080335,
+            12.9862481
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 38751028,
+          "osm_key": "historic",
+          "osm_value": "castle",
+          "type": "house",
+          "name": "Tippu's Summer Palace",
+          "street": "Albert Victor Road",
+          "locality": "Chamarajapete",
+          "district": "Chamarajpet",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560002",
+          "countrycode": "IN",
+          "extent": [
+            77.5733202,
+            12.9599839,
+            77.5742757,
+            12.9589679
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5736842,
+            12.9596466
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 175293916,
+          "osm_key": "natural",
+          "osm_value": "water",
+          "type": "other",
+          "name": "Palace Grounds Lake",
+          "locality": "Guttahalli",
+          "district": "Rajamahal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5851491,
+            13.0034371,
+            77.5872144,
+            13.0009804
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5860848,
+            13.0022192
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1195581195,
+          "osm_key": "landuse",
+          "osm_value": "residential",
+          "type": "locality",
+          "name": "Silver Palace",
+          "district": "Jayamahal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5937641,
+            12.995297,
+            77.5944339,
+            12.9944998
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5941091,
+            12.9949507
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1153506162,
+          "osm_key": "landuse",
+          "osm_value": "residential",
+          "type": "locality",
+          "housenumber": "14",
+          "name": "Palace Garden Apartments",
+          "street": "Palace Cross Road",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560020",
+          "countrycode": "IN",
+          "extent": [
+            77.5872751,
+            12.996345,
+            77.5880268,
+            12.995341
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5876607,
+            12.9958502
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 437536513,
+          "osm_key": "landuse",
+          "osm_value": "residential",
+          "type": "locality",
+          "name": "Embassy Palace",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.587169,
+            12.9921535,
+            77.5878954,
+            12.9915452
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5875214,
+            12.9918566
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 400449960,
+          "osm_key": "landuse",
+          "osm_value": "recreation_ground",
+          "type": "other",
+          "name": "Palace Grounds - Halls",
+          "district": "Rajamahal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5840986,
+            13.0144578,
+            77.5908738,
+            13.003743
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5867512,
+            13.0092634
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 568282200,
+          "osm_key": "place",
+          "osm_value": "neighbourhood",
+          "type": "locality",
+          "name": "Lower Palace Orchard",
+          "district": "Rajamahal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560003",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5797506,
+            13.0043153
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 11652617765,
+          "osm_key": "place",
+          "osm_value": "neighbourhood",
+          "type": "locality",
+          "name": "Upper Palace Orchard",
+          "district": "Sadashiva Nagara",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560080",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5810289,
+            13.0074952
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1342976489,
+          "osm_key": "landuse",
+          "osm_value": "residential",
+          "type": "locality",
+          "name": "Brigade Palace",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5888535,
+            12.9884945,
+            77.5895935,
+            12.9881285
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5893137,
+            12.9883507
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1147342237,
+          "osm_key": "landuse",
+          "osm_value": "residential",
+          "type": "locality",
+          "name": "Palace Orchard",
+          "district": "Sadashiva Nagara",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5780335,
+            13.010317,
+            77.5787631,
+            13.0097918
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5783983,
+            13.0100544
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 143384384,
+          "osm_key": "leisure",
+          "osm_value": "garden",
+          "type": "other",
+          "name": "Palace Greens",
+          "district": "Rajamahal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5919303,
+            12.9987144,
+            77.5930088,
+            12.9976091
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5924696,
+            12.9981618
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1183962718,
+          "osm_key": "landuse",
+          "osm_value": "residential",
+          "type": "locality",
+          "name": "Ahuja Palace",
+          "district": "Shanthinagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.599331,
+            12.9645424,
+            77.5998455,
+            12.9641388
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5995566,
+            12.9643244
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 257600770,
+          "osm_key": "highway",
+          "osm_value": "unclassified",
+          "type": "street",
+          "name": "Palace Loop Road",
+          "locality": "Chakravarty Layout",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560052",
+          "countrycode": "IN",
+          "extent": [
+            77.5890051,
+            12.995146,
+            77.5913994,
+            12.9931274
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5897151,
+            12.9947935
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 257625429,
+          "osm_key": "highway",
+          "osm_value": "tertiary",
+          "type": "street",
+          "name": "Palace Road",
+          "locality": "Chakravarty Layout",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560052",
+          "countrycode": "IN",
+          "extent": [
+            77.5889387,
+            12.9944794,
+            77.5894689,
+            12.9931855
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5892038,
+            12.9938325
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 335170910,
+          "osm_key": "highway",
+          "osm_value": "tertiary",
+          "type": "street",
+          "name": "Palace Cross Road",
+          "locality": "RV Layout",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560052",
+          "countrycode": "IN",
+          "extent": [
+            77.5843162,
+            12.9977502,
+            77.58448,
+            12.9977485
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5843981,
+            12.9977494
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 242815675,
+          "osm_key": "highway",
+          "osm_value": "tertiary",
+          "type": "street",
+          "name": "Gutahalli Palace Main Road",
+          "locality": "RV Layout",
+          "district": "Vasanth Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560020",
+          "countrycode": "IN",
+          "extent": [
+            77.5834705,
+            12.9993963,
+            77.5843139,
+            12.9978008
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5840421,
+            12.9987781
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 130302883,
+          "osm_key": "highway",
+          "osm_value": "tertiary",
+          "type": "street",
+          "name": "Palace Guttahalli Main Road",
+          "locality": "Guttahalli",
+          "district": "Rajamahal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560003",
+          "countrycode": "IN",
+          "extent": [
+            77.5813262,
+            12.9993643,
+            77.5828907,
+            12.9990175
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5821019,
+            12.9992215
+          ]
+        }
+      }
+    ]
+  }
+}

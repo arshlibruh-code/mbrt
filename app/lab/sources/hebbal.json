@@ -1,0 +1,494 @@
+{
+  "provenance": {
+    "name": "hebbal",
+    "url": "https://photon.komoot.io/api/?q=Hebbal&limit=20&lon=77.598&lat=13.035",
+    "method": "GET",
+    "fetchedAt": "2026-10-12T14:56:36.871Z"
+  },
+  "data": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 19883365,
+          "osm_key": "place",
+          "osm_value": "suburb",
+          "type": "district",
+          "name": "Hebbal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extra": {
+            "admin_level": "10"
+          },
+          "extent": [
+            77.586182,
+            13.0416335,
+            77.5982606,
+            13.028086
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5919,
+            13.0382184
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 430127627,
+          "osm_key": "railway",
+          "osm_value": "stop",
+          "type": "house",
+          "name": "Hebbal",
+          "street": "Outer Ring Road",
+          "locality": "Central Excise Layout",
+          "district": "Bhoopasandra",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5861862,
+            13.0424324
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 2967312447,
+          "osm_key": "railway",
+          "osm_value": "station",
+          "type": "house",
+          "name": "Hebbal",
+          "street": "Outer Ring Road",
+          "locality": "Central Excise Layout",
+          "district": "Bhoopasandra",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5862489,
+            13.0425476
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 430127791,
+          "osm_key": "highway",
+          "osm_value": "motorway_junction",
+          "type": "house",
+          "name": "Hebbal",
+          "street": "Hebbal Flyover",
+          "district": "Bhoopasandra",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.590516,
+            13.0434496
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 782061210,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "Hebbala",
+          "street": "Hebbal Flyover",
+          "district": "Hebbal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN",
+          "extent": [
+            77.5896563,
+            13.0389956,
+            77.5896842,
+            13.03892
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5896704,
+            13.0389581
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 782061211,
+          "osm_key": "amenity",
+          "osm_value": "shelter",
+          "type": "house",
+          "name": "Hebbala",
+          "street": "Hebbal Flyover",
+          "district": "Hebbal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN",
+          "extent": [
+            77.5896536,
+            13.0389168,
+            77.5896808,
+            13.0388531
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5896672,
+            13.038885
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 782061212,
+          "osm_key": "amenity",
+          "osm_value": "shelter",
+          "type": "house",
+          "name": "Hebbala",
+          "street": "3rd Main Road",
+          "locality": "Anand Nagar",
+          "district": "Hebbal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN",
+          "extent": [
+            77.5896497,
+            13.03885,
+            77.5896766,
+            13.0387832
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5896632,
+            13.0388166
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 782061210,
+          "osm_key": "amenity",
+          "osm_value": "shelter",
+          "type": "house",
+          "name": "Hebbala",
+          "street": "Hebbal Flyover",
+          "district": "Hebbal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN",
+          "extent": [
+            77.5896563,
+            13.0389956,
+            77.5896842,
+            13.03892
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5896704,
+            13.0389581
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 8754543,
+          "osm_key": "water",
+          "osm_value": "lake",
+          "type": "other",
+          "name": "Hebbal Lake",
+          "district": "Rajiv Gandhi Nagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5809967,
+            13.0510304,
+            77.591728,
+            13.0433506
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5867147,
+            13.0472025
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 232772109,
+          "osm_key": "landuse",
+          "osm_value": "industrial",
+          "type": "locality",
+          "name": "Hebbal 60MLD Sewage Treatment Plant",
+          "district": "Kempapura",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.6010616,
+            13.0434768,
+            77.6071741,
+            13.0410762
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6040643,
+            13.0424048
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 377832182,
+          "osm_key": "highway",
+          "osm_value": "trunk",
+          "type": "street",
+          "name": "Hebbal Flyover",
+          "district": "Bhoopasandra",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN",
+          "extent": [
+            77.5901565,
+            13.0435892,
+            77.5907549,
+            13.0420902
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5904159,
+            13.0428552
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1545405822,
+          "osm_key": "highway",
+          "osm_value": "construction",
+          "type": "street",
+          "name": "Hebbal Twin Tunnel",
+          "district": "Bhoopasandra",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN",
+          "extent": [
+            77.5868708,
+            13.032733,
+            77.587818,
+            13.0305792
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5873177,
+            13.031663
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1422993557,
+          "osm_key": "landuse",
+          "osm_value": "construction",
+          "type": "other",
+          "name": "Hebbal Multi-Modal Transit Hub (u/c)",
+          "district": "Kempapura",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "countrycode": "IN",
+          "extent": [
+            77.5916385,
+            13.047087,
+            77.5941127,
+            13.0424781
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5924343,
+            13.0450629
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1423056973,
+          "osm_key": "highway",
+          "osm_value": "trunk_link",
+          "type": "street",
+          "name": "Hebbal Flyover",
+          "district": "Hebbal",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN",
+          "extent": [
+            77.5892819,
+            13.0366275,
+            77.5893693,
+            13.0365127
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5893256,
+            13.0365701
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1101484902,
+          "osm_key": "highway",
+          "osm_value": "trunk",
+          "type": "street",
+          "name": "Hebbal Service Road towards Bengaluru",
+          "district": "Byatarayanapura",
+          "county": "Yelahanka taluku",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560064",
+          "countrycode": "IN",
+          "extent": [
+            77.5927859,
+            13.0735959,
+            77.5927878,
+            13.0734451
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5927869,
+            13.0735205
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 9820589377,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "Kempapura",
+          "street": "Outer Ring Road",
+          "locality": "Jogappa Layout",
+          "district": "Kempapura",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560024",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6018105,
+            13.0435918
+          ]
+        }
+      }
+    ]
+  }
+}

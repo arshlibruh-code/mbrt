@@ -1,0 +1,437 @@
+{
+  "provenance": {
+    "name": "nandi",
+    "url": "https://photon.komoot.io/api/?q=Nandi&limit=20&lon=77.684&lat=13.37",
+    "method": "GET",
+    "fetchedAt": "2026-10-12T14:56:35.057Z"
+  },
+  "data": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 512073887,
+          "osm_key": "place",
+          "osm_value": "village",
+          "type": "city",
+          "name": "Nandi",
+          "county": "Chikkaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562103",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6983878,
+            13.385523
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 13328330060,
+          "osm_key": "railway",
+          "osm_value": "stop",
+          "type": "house",
+          "name": "Nandi",
+          "city": "Nandi",
+          "county": "Chikkaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562103",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.7110492,
+            13.3770638
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 6071994601,
+          "osm_key": "railway",
+          "osm_value": "halt",
+          "type": "house",
+          "name": "Nandi",
+          "city": "Nandi",
+          "county": "Chikkaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562103",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.710801,
+            13.3771017
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 4590879290,
+          "osm_key": "tourism",
+          "osm_value": "hostel",
+          "type": "house",
+          "name": "Nandi",
+          "street": "Gubbi Thotadappa Road",
+          "district": "Cottonpete",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560023",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5701518,
+            12.9752846
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 9504594319,
+          "osm_key": "tourism",
+          "osm_value": "artwork",
+          "type": "house",
+          "name": "Nandi",
+          "street": "Shivagange trek",
+          "district": "Shivagange",
+          "city": "Shivagange",
+          "county": "Nelamangala taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562111",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.2239843,
+            13.1693739
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 331759793,
+          "osm_key": "natural",
+          "osm_value": "peak",
+          "type": "other",
+          "name": "Nandi Hill",
+          "city": "Sultanapete",
+          "county": "Chikkaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562103",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6847849,
+            13.3700061
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 13373597900,
+          "osm_key": "natural",
+          "osm_value": "peak",
+          "type": "other",
+          "name": "Nandi Hill",
+          "city": "Sultanapete",
+          "county": "Chikkaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562103",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.686023,
+            13.3705141
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1306347577,
+          "osm_key": "highway",
+          "osm_value": "secondary",
+          "type": "street",
+          "name": "Nandi Hill Road",
+          "city": "Sultanapete",
+          "county": "Chikkaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562103",
+          "countrycode": "IN",
+          "extent": [
+            77.6795721,
+            13.3720163,
+            77.6804948,
+            13.3711843
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6798589,
+            13.3714472
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1248843409,
+          "osm_key": "highway",
+          "osm_value": "secondary",
+          "type": "street",
+          "name": "Nandi Hill Road",
+          "city": "Heggadihalli",
+          "county": "Doddaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "561205",
+          "countrycode": "IN",
+          "extent": [
+            77.6524166,
+            13.3588061,
+            77.6556963,
+            13.3541905
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6537895,
+            13.3571034
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1248856389,
+          "osm_key": "highway",
+          "osm_value": "primary",
+          "type": "street",
+          "name": "Nandi Hills Road",
+          "city": "Karahalli",
+          "county": "Devanahalli taluku",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562164",
+          "countrycode": "IN",
+          "extent": [
+            77.6918122,
+            13.3278795,
+            77.6924505,
+            13.3259093
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6920808,
+            13.3268654
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 4410288523,
+          "osm_key": "place",
+          "osm_value": "village",
+          "type": "city",
+          "name": "Nandigunda",
+          "county": "Doddaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "561205",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6460915,
+            13.3397072
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 332155217,
+          "osm_key": "leisure",
+          "osm_value": "playground",
+          "type": "house",
+          "name": "Nandi Hills Playground",
+          "street": "Nandi Hill Road",
+          "city": "Sultanapete",
+          "county": "Chikkaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562103",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6841533,
+            13.3701322
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1339831161,
+          "osm_key": "highway",
+          "osm_value": "primary",
+          "type": "street",
+          "name": "Nandi Hills Road",
+          "city": "Devanahalli",
+          "county": "Devanahalli taluku",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562110",
+          "countrycode": "IN",
+          "extent": [
+            77.719253,
+            13.2681087,
+            77.7192802,
+            13.268025
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.7192666,
+            13.2680669
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1214325537,
+          "osm_key": "highway",
+          "osm_value": "primary",
+          "type": "street",
+          "name": "Nandi Hills Road",
+          "city": "Doddaballapura",
+          "county": "Doddaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "561203",
+          "countrycode": "IN",
+          "extent": [
+            77.5463947,
+            13.3143856,
+            77.5479194,
+            13.3137637
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5471571,
+            13.3140746
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 726121151,
+          "osm_key": "landuse",
+          "osm_value": "commercial",
+          "type": "locality",
+          "name": "Nandini School",
+          "city": "Vijayapura",
+          "county": "Devanahalli taluku",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562135",
+          "countrycode": "IN",
+          "extent": [
+            77.8049225,
+            13.290995,
+            77.8058451,
+            13.2902175
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.8053647,
+            13.2906452
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 9919038052,
+          "osm_key": "shop",
+          "osm_value": "dairy",
+          "type": "house",
+          "name": "Nandini",
+          "street": "Nandi Hill Road",
+          "city": "Sultanapete",
+          "county": "Chikkaballapura taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "562103",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6820429,
+            13.3695887
+          ]
+        }
+      }
+    ]
+  }
+}

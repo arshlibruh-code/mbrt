@@ -1,0 +1,517 @@
+{
+  "provenance": {
+    "name": "mg",
+    "url": "https://photon.komoot.io/api/?q=MG%20Road%20Bengaluru&limit=20&lon=77.61&lat=12.975",
+    "method": "GET",
+    "fetchedAt": "2026-10-12T14:56:33.102Z"
+  },
+  "data": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 3730961538,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "MG Road",
+          "street": "Mahatma Gandhi Road",
+          "locality": "Craig Park Layout",
+          "district": "Ashokanagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6124135,
+            12.9741854
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 2397087882,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "Anil Kumble Circle",
+          "street": "Central Street",
+          "locality": "Shanthala Nagar",
+          "district": "Ashokanagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6019588,
+            12.9777227
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 1837445442,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "MG Road Parade Ground",
+          "street": "Mahatma Gandhi Road",
+          "locality": "Shanthala Nagar",
+          "district": "Ashokanagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6061031,
+            12.9756214
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 7132452575,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "MG Road Metro Station",
+          "street": "Mahatma Gandhi Road",
+          "locality": "Ashok Nagar",
+          "district": "Ashokanagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6064952,
+            12.9753877
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 173435228,
+          "osm_key": "tourism",
+          "osm_value": "hotel",
+          "type": "house",
+          "housenumber": "41/3",
+          "name": "Taj MG Road",
+          "street": "Mahatma Gandhi Road",
+          "locality": "Hanumanthappa Layout",
+          "district": "K Kamaraj Ward",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN",
+          "extent": [
+            77.6193388,
+            12.9737634,
+            77.6199699,
+            12.9727036
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6196812,
+            12.973316
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 12117975290,
+          "osm_key": "shop",
+          "osm_value": "car",
+          "type": "house",
+          "housenumber": "40/4",
+          "name": "MG",
+          "street": "Lavelle Road",
+          "locality": "D'Souza Layout",
+          "district": "Ashokanagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5995207,
+            12.9752087
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 147558632,
+          "osm_key": "shop",
+          "osm_value": "mall",
+          "type": "house",
+          "name": "One M G Road",
+          "street": "Bhaskaran Road",
+          "locality": "Someshwarpura",
+          "district": "Halasuru",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560008",
+          "countrycode": "IN",
+          "extent": [
+            77.6201355,
+            12.974055,
+            77.6205902,
+            12.9727867
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6203605,
+            12.9735715
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 9171580314,
+          "osm_key": "shop",
+          "osm_value": "car",
+          "type": "house",
+          "name": "MG",
+          "street": "20th Main Road",
+          "locality": "Rajajinagar 2nd Block",
+          "district": "Rajajinagara",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560010",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5508025,
+            12.9967141
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 4144220198,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "MG Statue",
+          "street": "Mahatma Gandhi Road",
+          "locality": "Shanthala Nagar",
+          "district": "Ashokanagar",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5999592,
+            12.9767485
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 6944138104,
+          "osm_key": "amenity",
+          "osm_value": "clinic",
+          "type": "house",
+          "name": "M.G. Speciality Health Care (A Unit Of Mgmi Hospitals(India) Pvt Ltd)",
+          "street": "13th Cross Road",
+          "locality": "Vinayaka Nagara",
+          "district": "Hombegowda Nagara",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560027",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.5975627,
+            12.9462401
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 12215439066,
+          "osm_key": "shop",
+          "osm_value": "butcher",
+          "type": "house",
+          "name": "The Meat Pantry by Cambay Tiger",
+          "street": "Mahatma Gandhi Road",
+          "district": "Agaram",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560042",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6203543,
+            12.9730642
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 7178597795,
+          "osm_key": "amenity",
+          "osm_value": "cafe",
+          "type": "house",
+          "housenumber": "1MG Mall",
+          "name": "Food Hall",
+          "street": "Mahatma Gandhi Road",
+          "district": "Agaram",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560008",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6204172,
+            12.973545
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 10727955503,
+          "osm_key": "amenity",
+          "osm_value": "restaurant",
+          "type": "house",
+          "name": "Yauatcha",
+          "street": "Mahatma Gandhi Road",
+          "district": "Agaram",
+          "city": "Bangalore",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560008",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6203649,
+            12.9732928
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 2401259157,
+          "osm_key": "highway",
+          "osm_value": "bus_stop",
+          "type": "house",
+          "name": "Manipal Center",
+          "street": "Cubbon Road Cycle Path",
+          "locality": "Hanumanthappa Layout",
+          "district": "K Kamaraj Ward",
+          "city": "Bengaluru",
+          "county": "Bangalore North",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560001",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6129099,
+            12.9759256
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 12050489476,
+          "osm_key": "amenity",
+          "osm_value": "fast_food",
+          "type": "house",
+          "name": "MG Donne Biryani",
+          "street": "4th B Main Road",
+          "locality": "AECS Layout B Block",
+          "district": "Priyadarshini Ward",
+          "county": "Bangalore East",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560037",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.7141322,
+            12.9661735
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1346134960,
+          "osm_key": "building",
+          "osm_value": "yes",
+          "type": "house",
+          "name": "MG House",
+          "street": "6th Cross Road",
+          "district": "Maragondanahalli",
+          "county": "Anekal",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560100",
+          "countrycode": "IN",
+          "extent": [
+            77.648003,
+            12.836717,
+            77.6482157,
+            12.8364906
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6480921,
+            12.8366307
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 8354843902,
+          "osm_key": "shop",
+          "osm_value": "car",
+          "type": "house",
+          "name": "MG Cars",
+          "street": "Bengaluru - Mangaluru Road",
+          "district": "Tanniru Halla",
+          "city": "Devarayapattana",
+          "county": "Hasana taluk",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "573201",
+          "countrycode": "IN"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            76.0740897,
+            12.9939073
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 1428485635,
+          "osm_key": "highway",
+          "osm_value": "residential",
+          "type": "street",
+          "name": "MGR Old Road",
+          "district": "Haragaddhe",
+          "city": "Jigani",
+          "county": "Anekal",
+          "state": "Karnataka",
+          "country": "India",
+          "postcode": "560105",
+          "countrycode": "IN",
+          "extent": [
+            77.6504984,
+            12.7754406,
+            77.651012,
+            12.7751593
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            77.6507154,
+            12.7753687
+          ]
+        }
+      }
+    ]
+  }
+}

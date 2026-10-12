@@ -1,0 +1,629 @@
+{
+  "provenance": {
+    "name": "london",
+    "url": "https://photon.komoot.io/api/?q=London%20United%20Kingdom&limit=20&lon=-0.127&lat=51.507",
+    "method": "GET",
+    "fetchedAt": "2026-10-12T14:56:41.590Z"
+  },
+  "data": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 175342,
+          "osm_key": "place",
+          "osm_value": "city",
+          "type": "city",
+          "name": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "5"
+          },
+          "extent": [
+            -0.5103751,
+            51.6918741,
+            0.3340155,
+            51.2867601
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1277653,
+            51.5074456
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 51800,
+          "osm_key": "place",
+          "osm_value": "city",
+          "type": "district",
+          "name": "City of London",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "6"
+          },
+          "extent": [
+            -0.1138295,
+            51.5233122,
+            -0.0727619,
+            51.5068709
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.0919983,
+            51.5156177
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 19176990,
+          "osm_key": "boundary",
+          "osm_value": "fire",
+          "type": "other",
+          "name": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extent": [
+            -0.5103751,
+            51.6918741,
+            0.3340155,
+            51.2867601
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1440551,
+            51.4893335
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 65606,
+          "osm_key": "boundary",
+          "osm_value": "ceremonial",
+          "type": "other",
+          "name": "Greater London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extent": [
+            -0.5103751,
+            51.6918741,
+            0.3340155,
+            51.2867601
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1440551,
+            51.4893335
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 51827,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Camden",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.2135115,
+            51.5729604,
+            -0.1053162,
+            51.5126591
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1624803,
+            51.5427966
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 51806,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Hackney",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.1045094,
+            51.5777843,
+            -0.0165273,
+            51.5198144
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.0476691,
+            51.5488819
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 4124110,
+          "osm_key": "amenity",
+          "osm_value": "university",
+          "type": "house",
+          "name": "London School of Economics and Political Science",
+          "street": "Houghton Street",
+          "locality": "St Clement Danes",
+          "district": "Covent Garden",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "postcode": "WC2A 2AE",
+          "countrycode": "GB",
+          "extent": [
+            -0.11887,
+            51.5158628,
+            -0.1143006,
+            51.5132068
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1164509,
+            51.5146063
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 11373735,
+          "osm_key": "amenity",
+          "osm_value": "university",
+          "type": "house",
+          "name": "University College London",
+          "street": "Grafton Way",
+          "district": "Fitzrovia",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "postcode": "WC1E 6DB",
+          "countrycode": "GB",
+          "extent": [
+            -0.1434184,
+            51.5309664,
+            -0.1140049,
+            51.5194095
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1330007,
+            51.524203
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 51821,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Islington",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.1425085,
+            51.5755041,
+            -0.0763317,
+            51.5185531
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1016584,
+            51.5470349
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 184710,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Lambeth",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.1512323,
+            51.5098712,
+            -0.0783137,
+            51.4109915
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1213128,
+            51.4604662
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 18398038,
+          "osm_key": "amenity",
+          "osm_value": "university",
+          "type": "house",
+          "name": "King's College London, Waterloo Campus",
+          "street": "Charlie Chaplin Walk",
+          "locality": "South Bank",
+          "district": "Waterloo",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "postcode": "SE1 8XR",
+          "countrycode": "GB",
+          "extent": [
+            -0.1137324,
+            51.506249,
+            -0.1109479,
+            51.5046864
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1115945,
+            51.5052366
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 8450265,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Southwark",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.1114867,
+            51.5099094,
+            -0.0293726,
+            51.4206052
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.0690186,
+            51.4652546
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 51805,
+          "osm_key": "place",
+          "osm_value": "borough",
+          "type": "district",
+          "name": "London Borough of Tower Hamlets",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.080209,
+            51.544686,
+            0.0098639,
+            51.4845245
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.0350559,
+            51.5146145
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 370870741,
+          "osm_key": "historic",
+          "osm_value": "castle",
+          "type": "house",
+          "name": "Tower of London",
+          "street": "Tower Hill",
+          "locality": "East Smithfield",
+          "district": "Whitechapel",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "postcode": "EC3N 4AB",
+          "countrycode": "GB",
+          "extent": [
+            -0.0780521,
+            51.5091106,
+            -0.0745206,
+            51.5071555
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.0761879,
+            51.508217
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 184484,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Hammersmith and Fulham",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.2550873,
+            51.5327358,
+            -0.1776273,
+            51.4638978
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.2278782,
+            51.4983142
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 51906,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Wandsworth",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.2591346,
+            51.4858926,
+            -0.1263637,
+            51.417752
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1995082,
+            51.4519012
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 12233221,
+          "osm_key": "amenity",
+          "osm_value": "university",
+          "type": "house",
+          "name": "Imperial College London",
+          "street": "Exhibition Road",
+          "district": "Brompton",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "postcode": "SW7 2AZ",
+          "countrycode": "GB",
+          "extent": [
+            -0.1796387,
+            51.5005048,
+            -0.1716923,
+            51.4973576
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1756407,
+            51.4989595
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 33756313,
+          "osm_key": "office",
+          "osm_value": "government",
+          "type": "house",
+          "housenumber": "197",
+          "name": "Transport for London",
+          "street": "Blackfriars Road",
+          "locality": "Bankside",
+          "district": "Southwark",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "postcode": "SE1 8NJ",
+          "countrycode": "GB",
+          "extent": [
+            -0.104352,
+            51.5040625,
+            -0.1028937,
+            51.5037048
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.1036222,
+            51.503929
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 185505,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Newham",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.0212642,
+            51.5640206,
+            0.0997977,
+            51.4960037
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            0.0293091,
+            51.5300157
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 151795,
+          "osm_key": "boundary",
+          "osm_value": "administrative",
+          "type": "district",
+          "name": "London Borough of Richmond upon Thames",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extra": {
+            "admin_level": "8"
+          },
+          "extent": [
+            -0.3929338,
+            51.4896879,
+            -0.2217611,
+            51.3914316
+          ]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -0.3076394,
+            51.4405529
+          ]
+        }
+      }
+    ]
+  }
+}
