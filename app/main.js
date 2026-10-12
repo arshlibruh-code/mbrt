@@ -537,12 +537,21 @@ $("msg").addEventListener("blur", () => fx.focus(false));
 
 const hints = (() => {
   const GLYPHS = "#/\\|<>[]=+*-_01";
-  const golden0 = golden.filter((g) => g.id.startsWith("g") && !/@|this|here/.test(g.prompt)).map((g) => g.prompt);
+  const WORLD = [
+    "30 min drive from Shibuya, Tokyo", "walking route from the Louvre to Notre-Dame", "2 mile buffer around Central Park",
+    "where is Machu Picchu", "elevation profile from Chamonix to Zermatt", "15 min walk from Times Square",
+    "cycling route from Dam Square to Vondelpark", "show the boundary of Iceland", "1 hour drive from Cape Town",
+    "line from London to New York", "top 5 places to visit in Istanbul", "20 min cycling from Copenhagen Central Station",
+    "route from San Francisco to Yosemite", "polygon between Rome, Florence and Venice", "show me Petra, Jordan",
+    "route from Mexico City to Teotihuacan", "2 km buffer around the Sydney Opera House", "drive from Reykjavik to Vik",
+    "45 min drive from Nairobi", "route from Bengaluru to Mysuru", "walking route from Shibuya to Harajuku",
+    "show the boundary of Bavaria", "line from Cairo to Cape Town", "10 min walk from Gamla Stan, Stockholm",
+  ];
   const FOLLOW = {
     route: ["now walking", "elevation of that", "clear the map"],
     isochrone: ["same but cycling", "and 15 minutes too"],
     buffer: ["make it 5 km", "clear the buffers"],
-    markers: ["route there from Bengaluru", "10 km buffer around it"],
+    markers: ["route there from my location", "10 km buffer around it"],
     line: ["now as a road route"],
     polygon: ["clear the map"],
     elevation_profile: ["switch to 3D terrain"],
@@ -555,7 +564,7 @@ const hints = (() => {
       const near = map.getZoom() >= 5 ? await placeNear(map.getCenter().toArray()).catch(() => "") : "";
       const town = near.split(",").slice(0, 2).join(",").trim();
       const local = town ? [`15 min walk from ${town}`, `5 km buffer around ${town}`, `where is ${town}`] : [];
-      queue = [...local, ...golden0.sort(() => Math.random() - 0.5).slice(0, 6)];
+      queue = [...local, ...[...WORLD].sort(() => Math.random() - 0.5).slice(0, 6)];
     }
     return queue.shift();
   };
