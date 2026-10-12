@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mbrt / style lab</title>
+  <link rel="icon" href="/mbrt-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/lab/lab.css">
+</head>
+<body>
+  <header class="toolbar">
+    <div class="identity"><img src="/mbrt-mark.svg" alt="mbrt" width="30" height="30"><div><b>STYLE LAB</b><small>ONE SCENE / THREE INSTRUMENTS</small></div><span class="dev">DEV ONLY</span></div>
+    <div class="controls">
+      <div class="seg" id="basemaps" aria-label="Basemap"><button data-base="SAT">SAT</button><button data-base="DARK" aria-pressed="true">DARK</button><button data-base="MAP">MAP</button><button data-base="OFFLINE" title="Local geometry without network tiles">OFFLINE</button></div>
+      <div class="seg" id="cameras" aria-label="Camera"><button data-camera="CITY" aria-pressed="true">CITY</button><button data-camera="WORLD">WORLD</button></div>
+      <label class="check"><input id="numbers" type="checkbox" checked> NUMBERS ON EVERYTHING</label>
+      <button id="replay">↳ REPLAY ARRIVAL / 600 MS</button>
+    </div>
+  </header>
+  <div class="scene-bar"><span id="scene-summary">Loading the frozen Bengaluru scene</span><span id="sync-status">CAMERAS + SELECTION + CURSOR SYNCED</span></div>
+  <nav class="results" id="results" aria-label="Select a result"></nav>
+  <main id="panels"></main>
+  <footer><span id="provenance"></span><span>Geometry + Quantico stored locally. Online basemaps need network tiles.</span><a href="/lab/fixture.json" target="_blank">FIXTURE ↗</a></footer>
+  <details class="methods"><summary>SOURCES / MEASUREMENT NOTES / PORTING</summary><div id="methods"></div></details>
+  <script type="module" src="/lab/lab.js"></script>
+</body>
+</html>
