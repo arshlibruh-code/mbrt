@@ -1,5 +1,6 @@
 // Score a model on the golden set.
 //   node run.js --dry                       check golden + scorer, no API call
+//   node run.js --compare                   table of every result CSV, grouped by model and prompt version
 //   node run.js --model claude-haiku-5-5    Anthropic (ANTHROPIC_API_KEY)
 //   node run.js --model groq:openai/gpt-oss-120b --runs 1 --concurrency 1   Groq free (GROQ_API_KEY)
 //   node run.js --model codex --runs 1      ChatGPT plan through the logged-in Codex CLI, no key
@@ -8,6 +9,7 @@
 
 import fs from "node:fs";
 import os from "node:os";
+import crypto from "node:crypto";
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +28,8 @@ const RUNS = Number(flag("runs", 3));
 const EFFORT = flag("effort", "low");
 const CONC = Number(flag("concurrency", 4));
 const ONLY = flag("only", null)?.split(",");
+// any change to the system prompt or tool schema gets a new version; results only compare within one
+const PROMPT_V = crypto.createHash("sha256").update(SYSTEM + JSON.stringify(TOOLS)).digest("hex").slice(0, 8);
 
 // $ per million tokens, input / output
 const PRICE = { "claude-haiku-5-5": [0.10, 0.50] };
@@ -70,32 +74,43 @@ async function groqAdapter(model) {
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
   return async (prompt) => {
     for (let attempt = 0; ; attempt++) {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify({
-          model,
-          temperature: 0,
-          tool_choice: "required",
-          tools,
-          messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }],
-        }),
-      });
+      const t0 = Date.now();
+      let res;
+      try {
+        res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+          signal: AbortSignal.timeout(30000),
+          body: JSON.stringify({
+            model,
+            temperature: 0,
+            tool_choice: "required",
+            parallel_tool_calls: false,
+            tools,
+            messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }],
+          }),
+        });
+      } catch (err) {
+        return { call: null, inTok: 0, outTok: 0, ms: Date.now() - t0, raw: `error: ${err.name} ${err.message}` };
+      }
       if (res.status === 429 && attempt < 8) {
         const wait = Number(res.headers.get("retry-after") ?? 10);
         await new Promise((r) => setTimeout(r, (wait + 1) * 1000));
         continue;
       }
+      const ms = Date.now() - t0; // model time only, rate-limit waits excluded
       const body = await res.json();
-      if (!res.ok) return { call: null, inTok: 0, outTok: 0, raw: `error: ${res.status} ${body.error?.message ?? ""}` };
-      const msg = body.choices[0].message, fn = msg.tool_calls?.[0]?.function;
-      let args = null;
-      try { args = fn && JSON.parse(fn.arguments); } catch {}
+      if (!res.ok) return { call: null, inTok: 0, outTok: 0, ms, raw: `error: ${res.status} ${body.error?.message ?? ""}` };
+      const msg = body.choices[0].message, calls = msg.tool_calls ?? [], fn = calls[0]?.function;
+      let args = null, raw = fn ? "" : `no tool call: ${msg.content ?? ""}`;
+      if (fn) try { args = JSON.parse(fn.arguments); } catch { raw = `bad JSON args: ${fn.arguments}`; }
+      if (calls.length > 1) raw = `${calls.length} tool calls, scored the first`;
       return {
         call: fn ? { tool: fn.name, args } : null,
         inTok: body.usage?.prompt_tokens ?? 0,
         outTok: body.usage?.completion_tokens ?? 0,
-        raw: fn ? "" : `no tool call: ${msg.content ?? ""}`,
+        ms,
+        raw,
       };
     }
   };
@@ -169,7 +184,7 @@ function dry() {
     for (const k of PLACE_KEYS) if (k in swapped.args) swapped.args[k] = Array.isArray(swapped.args[k]) ? swapped.args[k].map(() => "Timbuktu") : "Timbuktu";
     if (PLACE_KEYS.some((k) => k in g.expect.args) && !g.match && score(swapped, g.expect).ok) say(`${g.id} passes with wrong places`);
   }
-  console.log(`${golden.length} rows, ${fails} failures`);
+  console.log(`${golden.length} rows, ${fails} failures, prompt ${PROMPT_V}`);
   process.exit(fails ? 1 : 0);
 }
 
@@ -201,7 +216,7 @@ async function run() {
         r = { call: null, inTok: 0, outTok: 0, raw: `error: ${err.status ?? ""} ${err.message}` };
       }
       const s = [g.expect, ...(g.alt ?? [])].map((e) => score(r.call, e, g.match)).find((x) => x.ok) ?? score(r.call, g.expect, g.match);
-      rows.push({ id: g.id, run, ms: Date.now() - t0, valid: valid(r.call), ...s, ...r });
+      rows.push({ id: g.id, run, ms: Date.now() - t0, valid: valid(r.call), ...s, ...r }); // adapters may report their own ms
       process.stdout.write(s.ok ? "." : "x");
     }
   }
@@ -210,11 +225,11 @@ async function run() {
 
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "");
   fs.mkdirSync(path.join(here, "results"), { recursive: true });
-  const file = path.join(here, "results", `${MODEL.replace(/[^a-z0-9.-]+/gi, "_")}-${EFFORT}-${stamp}.csv`);
-  const head = ["model", "id", "run", "ok", "tool_ok", "valid", "ms", "in_tok", "out_tok", "tool", "args", "why", "raw"];
+  const file = path.join(here, "results", `${MODEL.replace(/[^a-z0-9.-]+/gi, "_")}-${EFFORT}-${PROMPT_V}-${stamp}.csv`);
+  const head = ["model", "prompt_v", "id", "run", "ok", "tool_ok", "valid", "ms", "in_tok", "out_tok", "tool", "args", "why", "raw"];
   rows.sort((a, b) => a.id.localeCompare(b.id) || a.run - b.run);
   fs.writeFileSync(file, [head.join(","), ...rows.map((r) =>
-    [MODEL, r.id, r.run, r.ok, r.toolOk, r.valid, r.ms, r.inTok, r.outTok, r.call?.tool, JSON.stringify(r.call?.args ?? null), r.why, r.raw].map(csvCell).join(",")
+    [MODEL, PROMPT_V, r.id, r.run, r.ok, r.toolOk, r.valid, r.ms, r.inTok, r.outTok, r.call?.tool, JSON.stringify(r.call?.args ?? null), r.why, r.raw].map(csvCell).join(",")
   )].join("\n") + "\n");
 
   const n = rows.length, neg = rows.filter((r) => r.id.startsWith("n"));
@@ -222,7 +237,7 @@ async function run() {
   const [pi, po] = PRICE[MODEL] ?? [NaN, NaN];
   const cost = (inTok * pi + outTok * po) / 1e6;
   const ms = rows.map((r) => r.ms);
-  console.log(`model        ${MODEL} (effort ${EFFORT}), ${golden.length} prompts x ${RUNS} runs`);
+  console.log(`model        ${MODEL} (effort ${EFFORT}, prompt ${PROMPT_V}), ${golden.length} prompts x ${RUNS} runs`);
   console.log(`schema-valid ${pct(rows.filter((r) => r.valid).length, n)}`);
   console.log(`tool right   ${pct(rows.filter((r) => r.toolOk).length, n)}`);
   console.log(`args right   ${pct(rows.filter((r) => r.ok).length, n)}`);
@@ -237,4 +252,53 @@ async function run() {
   console.log(`csv          ${path.relative(process.cwd(), file)}`);
 }
 
-DRY ? dry() : run();
+// ---- compare: every CSV in results/, one row per model + prompt version
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') (cell += '"'), i++;
+      else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") row.push(cell), (cell = "");
+    else if (c === "\n") row.push(cell), rows.push(row), (row = []), (cell = "");
+    else cell += c;
+  }
+  const [head, ...body] = rows;
+  return body.map((r) => Object.fromEntries(head.map((h, i) => [h, r[i]])));
+}
+
+function compare() {
+  const dir = path.join(here, "results");
+  const groups = new Map();
+  for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".csv")))
+    for (const r of parseCsv(fs.readFileSync(path.join(dir, f), "utf8"))) {
+      const key = `${r.model}|${r.prompt_v ?? "unversioned"}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    }
+  const lines = [...groups].map(([key, rs]) => {
+    const [model, v] = key.split("|"), neg = rs.filter((r) => r.id.startsWith("n"));
+    const ms = rs.map((r) => Number(r.ms));
+    return {
+      model, v, prompts: new Set(rs.map((r) => r.id)).size, rows: rs.length,
+      args: pct(rs.filter((r) => r.ok === "true").length, rs.length),
+      neg: pct(neg.filter((r) => r.ok === "true").length, neg.length),
+      p50: `${q(ms, 0.5)} ms`,
+      misses: rs.filter((r) => r.ok !== "true").map((r) => r.id).join(" "),
+    };
+  }).sort((a, b) => (b.v === PROMPT_V) - (a.v === PROMPT_V) || a.model.localeCompare(b.model));
+  const cols = ["model", "v", "prompts", "rows", "args", "neg", "p50", "misses"];
+  const width = Object.fromEntries(cols.map((c) => [c, Math.max(c.length, ...lines.map((l) => String(l[c]).length))]));
+  const fmt = (l) => cols.map((c) => String(l[c]).padEnd(width[c])).join("  ");
+  console.log(`current prompt ${PROMPT_V}; only rows with the same v are comparable\n`);
+  console.log(fmt(Object.fromEntries(cols.map((c) => [c, c]))));
+  for (const l of lines) console.log(fmt(l));
+}
+
+if (process.argv.includes("--compare")) compare();
+else DRY ? dry() : run();

@@ -23,6 +23,7 @@
     h1 { margin: 0; font-size: 26px; font-variation-settings: "opsz" 120; font-weight: 700; letter-spacing: -0.01em; }
     .sub, label > span, #log b, dt { font-size: 10px; font-variation-settings: "opsz" 9; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink2); }
     .sub { display: block; margin: 2px 0 14px; }
+    .or { margin: 12px 0 8px; padding-top: 10px; border-top: 1px solid var(--hair); }
     #desc { color: var(--ink2); margin: 6px 0 10px; font-size: 13px; }
     label { display: block; margin-bottom: 8px; }
     label > span { display: block; margin-bottom: 3px; }
@@ -61,7 +62,11 @@
 <body>
   <aside id="panel">
     <h1>mbrt</h1>
-    <span class="sub">map tools · manual mode, no model</span>
+    <span class="sub">chat to a map · gpt-oss-120b on Groq</span>
+    <form id="chat" autocomplete="off">
+      <label><span>ask</span><input id="msg" placeholder="30 min drive from Koramangala" maxlength="500"></label>
+    </form>
+    <span class="sub or">or pick a tool by hand</span>
     <form id="form" autocomplete="off">
       <label><span>tool</span><select id="tool"></select></label>
       <p id="desc"></p>

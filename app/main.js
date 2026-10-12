@@ -187,10 +187,10 @@ for (const g of golden) EXAMPLE[g.expect.tool] ??= g.expect.args;
 
 const kindOf = (s) => (s.type === "array" ? `array:${s.items.type}` : s.enum ? "enum" : s.type);
 
-function renderFields() {
+function renderFields(values) {
   const t = TOOLS.find((t) => t.name === $("tool").value);
   $("desc").textContent = t.description;
-  const ex = EXAMPLE[t.name] ?? {};
+  const ex = values ?? EXAMPLE[t.name] ?? {};
   $("fields").replaceChildren(...Object.entries(t.input_schema.properties).map(([key, s]) => {
     const req = t.input_schema.required.includes(key);
     const label = document.createElement("label");
@@ -234,15 +234,47 @@ function readArgs(t) {
   return args;
 }
 
-async function run(e) {
-  e.preventDefault();
-  const t = TOOLS.find((t) => t.name === $("tool").value);
-  const call = { tool: t.name, args: readArgs(t) };
-  $("call").textContent = JSON.stringify(call);
+const resetOutput = () => {
   $("log").replaceChildren();
   $("chart").hidden = true;
-  if (!validate[t.name](call.args)) {
-    log("bad", "schema", ajv.errorsText(validate[t.name].errors, { dataVar: "args" }));
+  $("call").textContent = "";
+};
+
+function run(e) {
+  e.preventDefault();
+  const t = TOOLS.find((t) => t.name === $("tool").value);
+  resetOutput();
+  runCall({ tool: t.name, args: readArgs(t) });
+}
+
+// the model only names the call; the server holds the Groq key (app/api/chat.js)
+async function ask(e) {
+  e.preventDefault();
+  const message = $("msg").value.trim();
+  if (!message) return;
+  resetOutput();
+  log("ok", "you", message);
+  $("msg").disabled = true;
+  try {
+    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message }) });
+    const body = await res.json().catch(() => ({ error: `server ${res.status}` }));
+    if (!res.ok) throw new Error(body.error);
+    log("ok", "Groq", `${body.model} chose ${body.call.tool} in ${body.ms} ms`);
+    $("tool").value = body.call.tool; // mirror into the form, so the call can be edited and rerun by hand
+    renderFields(body.call.args);
+    await runCall(body.call);
+  } catch (err) {
+    log("bad", "error", err.message);
+  } finally {
+    $("msg").disabled = false;
+    $("msg").focus();
+  }
+}
+
+async function runCall(call) {
+  $("call").textContent = JSON.stringify(call);
+  if (!validate[call.tool]?.(call.args)) {
+    log("bad", "schema", validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`);
     return;
   }
   $("run").disabled = true;
@@ -267,13 +299,13 @@ async function run(e) {
 
 $("tool").innerHTML = TOOLS.map((t) => `<option>${t.name}</option>`).join("");
 $("tool").value = "isochrone";
-$("tool").addEventListener("change", renderFields);
+$("tool").addEventListener("change", () => renderFields());
 $("form").addEventListener("submit", run);
+$("chat").addEventListener("submit", ask);
 $("clear").addEventListener("click", () => {
   drawn = [];
   selectedFid = 0;
   refresh();
-  $("log").replaceChildren();
-  $("chart").hidden = true;
+  resetOutput();
 });
 renderFields();
