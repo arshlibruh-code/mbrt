@@ -44,9 +44,8 @@ const map = new maplibregl.Map({
   zoom: 4,
   attributionControl: false,
 });
-// folded into the (i) above the bar; "© OpenStreetMap" stays visible on its own (index.html #credit)
-map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "Search: Photon by komoot · Routing: Valhalla by FOSSGIS · Boundaries: Nominatim" }), "bottom-right");
-map.once("load", () => document.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));
+// credits as one line of small text above the bar; the basemap's own credit is added by MapLibre per style
+map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: "© OpenStreetMap · Photon · OSRM, Valhalla (FOSSGIS) · Nominatim" }), "bottom-right");
 new ResizeObserver(() => document.documentElement.style.setProperty("--bar-h", `${$("chat").offsetHeight}px`)).observe($("chat"));
 
 // ---- tools overlay
