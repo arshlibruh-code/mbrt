@@ -437,6 +437,37 @@ async function viewContext() {
   return { zoom, near, selected: sel ? `${sel.properties.kind} ${sel.properties.label}` : "", me: !!knownMe };
 }
 
+// The model sometimes garbles a place it copies from an earlier turn ("Manali" -> "Manabi", "Koramangala" -> "Koroglob?").
+// A name the user did not type, close to one used before, snaps back to it: 1 letter in 3 off, or the same first 3 letters
+// and at most 3 in 4 off. Names in the user's own message are never touched.
+const PLACE_KEYS = ["places", "waypoints", "vertices", "centers", "center", "place"];
+function editDistance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function repairPlaces(call, message) {
+  const core = (p) => p.split(",")[0].trim().toLowerCase();
+  const said = message.toLowerCase();
+  const known = [...new Set(history.flatMap((t) => t.calls.flatMap((c) => PLACE_KEYS.flatMap((k) => [].concat(c.args?.[k] ?? [])))))]
+    .filter((p) => typeof p === "string" && !p.startsWith("@"));
+  const fixes = [];
+  const fix = (p) => {
+    if (typeof p !== "string" || p.startsWith("@") || known.includes(p) || said.includes(core(p))) return p;
+    for (const k of known) {
+      const a = core(p), b = core(k), ratio = editDistance(a, b) / Math.max(a.length, b.length);
+      let prefix = 0;
+      while (prefix < a.length && a[prefix] === b[prefix]) prefix++;
+      if (ratio <= 0.34 || (prefix >= 3 && ratio <= 0.75)) return fixes.push(`${p} → ${k}`), k;
+    }
+    return p;
+  };
+  for (const k of PLACE_KEYS) if (k in (call.args ?? {})) call.args[k] = Array.isArray(call.args[k]) ? call.args[k].map(fix) : fix(call.args[k]);
+  return fixes;
+}
+
 async function askModel(message, hist, signal) {
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -506,7 +537,9 @@ async function ask(e) {
         call = r.calls[0];
         if (call.tool === "plan") throw new Error(`step ${i + 1} came back as another plan`);
       }
+      const fixes = repairPlaces(call, item.step ?? message);
       pick("Groq", call, ms);
+      if (fixes.length) log("warn", "fixed", `model misspelled ${fixes.join(", ")}`);
       $("tool").value = call.tool; // mirror into the form, so the call can be edited and rerun by hand
       renderFields(call.args);
       const out = await runCall(call, stale, false);

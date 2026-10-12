@@ -52,6 +52,7 @@ export const TOOLS = [
 export const SYSTEM = `You control a map. Answer every message by calling exactly one tool, never with plain text.
 When the message asks for two or more map actions, call plan with one step per action.
 Earlier turns show what you did and what came of it; "it", "that", "there" and "now make it..." refer to them.
+When you reuse a place from an earlier turn, copy its name exactly, letter for letter.
 Keep place names as the user wrote them, adding the city or region when it is obvious, and never invent coordinates.
 "here" or "my location" means "@me"; "this point", "this line" or "the selected one" means "@selected".
 If the message is missing a place or number the tool needs, call reply with kind "clarify". Use "@me" or "@selected" only when the user's words point to them.

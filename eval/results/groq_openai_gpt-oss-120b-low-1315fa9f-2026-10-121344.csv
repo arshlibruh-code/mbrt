@@ -1,0 +1,7 @@
+model,prompt_v,id,run,ok,tool_ok,valid,ms,in_tok,out_tok,tool,args,why,raw
+"groq:openai/gpt-oss-120b","1315fa9f","m03","0","true","true","true","836","1267","74","isochrone","{""center"":""Koramangala, Bengaluru"",""profile"":""cycling"",""unit"":""minutes"",""values"":[30]}","",""
+"groq:openai/gpt-oss-120b","1315fa9f","m03","1","true","true","true","664","1267","74","isochrone","{""center"":""Koramangala, Bengaluru"",""profile"":""cycling"",""unit"":""minutes"",""values"":[30]}","",""
+"groq:openai/gpt-oss-120b","1315fa9f","m03","2","true","true","true","498","1267","74","isochrone","{""center"":""Koramangala, Bengaluru"",""profile"":""cycling"",""unit"":""minutes"",""values"":[30]}","",""
+"groq:openai/gpt-oss-120b","1315fa9f","m06","0","true","true","true","1483","1256","86","elevation_profile","{""profile"":""driving"",""waypoints"":[""Manali"",""Leh""]}","",""
+"groq:openai/gpt-oss-120b","1315fa9f","m06","1","true","true","true","621","1256","65","elevation_profile","{""profile"":""driving"",""waypoints"":[""Manali"",""Leh""]}","",""
+"groq:openai/gpt-oss-120b","1315fa9f","m06","2","true","true","true","610","1256","71","elevation_profile","{""profile"":""driving"",""waypoints"":[""Manali"",""Leh""]}","",""
