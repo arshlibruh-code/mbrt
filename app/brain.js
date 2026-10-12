@@ -137,6 +137,16 @@ export async function openrouterSpend(key) {
   return { today: data.usage_daily, total: data.usage, left: data.limit_remaining };
 }
 
+// [who, model, full model id] for the chip under the input
+export function short() {
+  const s = (m) => (m ?? "").split("/").pop();
+  const [who, m] = state.use === "openrouter" ? ["OpenRouter", state.openrouter?.model]
+    : state.use === "key" ? [`${nameOf(state.key?.provider)} key`, state.key?.model]
+    : state.use === "chatgpt" ? ["ChatGPT", state.chatgpt?.model]
+    : ["Shared", "openai/gpt-oss-120b"];
+  return [who, s(m), m];
+}
+
 // who is answering, for the feed
 export function label() {
   const short = (m) => (m ?? "").split("/").pop();

@@ -1,4 +1,4 @@
-// The BRAIN tab of the panel: which model answers, and whose account pays for it. onChange gets the label for the panel's footer.
+// The BRAIN tab of the panel: which model answers, and whose account pays for it. onChange fires when the brain or model changes.
 import * as brain from "./brain.js";
 
 const el = (tag, cls, html = "") => Object.assign(document.createElement(tag), { className: cls, innerHTML: html });
@@ -22,7 +22,7 @@ export function createBrainPicker(root, { onChange }) {
   };
 
   const sync = () => {
-    onChange(brain.label().replace(/^Theo$/, "Theo · shared · gpt-oss-120b"));
+    onChange();
     showTally();
     for (const b of seg.children) b.setAttribute("aria-pressed", b.dataset.value === open);
   };
@@ -130,5 +130,5 @@ export function createBrainPicker(root, { onChange }) {
   }
 
   render();
-  return { refresh: () => ((open = brain.get().use), render()) };
+  return { refresh: () => ((open = brain.get().use), render()), show: (v) => ((open = v), render()) };
 }

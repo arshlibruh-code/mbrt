@@ -10,6 +10,7 @@ import { createToolsForm, TOOL_ICONS } from "./tools-form.js";
 import { createBarFx } from "./bar-fx.js";
 import * as brain from "./brain.js";
 import { createBrainPicker } from "./brain-picker.js";
+import { createBrainChip } from "./brain-chip.js";
 
 maplibregl.setWorkerUrl(workerUrl);
 
@@ -89,7 +90,6 @@ function setTools(open, tab) {
 $("tools-open").addEventListener("click", () => setTools(!toolsOpen()));
 $("tools-close").addEventListener("click", () => setTools(false));
 for (const b of document.querySelectorAll(".ptabs [data-tab]")) b.addEventListener("click", () => setTools(true, b.dataset.tab));
-$("pfoot").addEventListener("click", () => setTools(true, "brain"));
 
 // keys: / opens the panel, 1-8 pick a tool, Esc cancels a map pick or closes the panel
 addEventListener("keydown", (e) => {
@@ -864,14 +864,17 @@ form.set("isochrone");
 syncMapTab();
 
 // the brain row in the tools overlay; a sign-in that just came back says so in the feed
-const picker = createBrainPicker($("brain"), { onChange: (text) => ($("pfoot").textContent = text) });
+// the chip under the input says who answers; a sign-in that just came back is confirmed there, not in the feed
+const chip = createBrainChip($("brain-chip"), $("brain-pop"), {
+  manage: (v) => (setTools(true, "brain"), picker.show(v)),
+  changed: () => picker.refresh(),
+});
+const picker = createBrainPicker($("brain"), { onChange: () => chip.sync() });
 brain.finishSignIn().then((r) => {
   if (!r) return;
-  newTurn();
-  result(r.text, r.ok ? "ok" : "warn");
   picker.refresh();
-  settleSoon();
-}).catch((err) => (newTurn(), fail(Object.assign(err, { kind: err.kind ?? "key" }), { again: () => {} })));
+  chip.flash(r.ok ? `✓ ${brain.short().slice(0, 2).join(" · ")}` : r.text, r.ok);
+}).catch((err) => chip.flash(`sign-in failed: ${err.message}`, false));
 $("form").addEventListener("submit", run);
 $("chat").addEventListener("submit", ask);
 $("clear").addEventListener("click", () => {
