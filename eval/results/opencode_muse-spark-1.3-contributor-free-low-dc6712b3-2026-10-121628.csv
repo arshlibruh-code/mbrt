@@ -1,0 +1,7 @@
+model,prompt_v,id,run,ok,tool_ok,valid,ms,in_tok,out_tok,tool,args,why,raw
+"opencode:muse-spark-1.3-contributor-free","dc6712b3","g01","0","true","true","true","35248","20519","29","markers","{""places"":[""Hampi, Karnataka""]}","",""
+"opencode:muse-spark-1.3-contributor-free","dc6712b3","g05","0","true","true","true","26984","20530","30","markers","{""places"":[""Eiffel Tower, Paris""]}","",""
+"opencode:muse-spark-1.3-contributor-free","dc6712b3","g09","0","true","true","true","12318","20507","38","route","{""waypoints"":[""Mumbai"",""Pune""],""profile"":""driving""}","",""
+"opencode:muse-spark-1.3-contributor-free","dc6712b3","m01","0","true","true","true","19701","20577","40","route","{""waypoints"":[""Bengaluru"",""Mysuru""],""profile"":""walking""}","",""
+"opencode:muse-spark-1.3-contributor-free","dc6712b3","m03","0","true","true","true","14155","20558","51","isochrone","{""center"":""Koramangala, Bengaluru"",""profile"":""cycling"",""unit"":""minutes"",""values"":[30]}","",""
+"opencode:muse-spark-1.3-contributor-free","dc6712b3","s01","0","true","true","true","11566","20516","48","plan","{""steps"":[""10 km buffer around Connaught Place, Delhi"",""30 min driving isochrone from India Gate, Delhi""]}","",""

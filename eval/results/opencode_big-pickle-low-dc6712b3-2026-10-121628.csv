@@ -1,0 +1,7 @@
+model,prompt_v,id,run,ok,tool_ok,valid,ms,in_tok,out_tok,tool,args,why,raw
+"opencode:big-pickle","dc6712b3","g01","0","true","true","true","23909","19569","21","markers","{""places"":[""Hampi, Karnataka""]}","",""
+"opencode:big-pickle","dc6712b3","g05","0","false","false","true","26909","17248","93","reply","{""kind"":""unsupported"",""text"":""This map can drop pins, routes, buffers and the like, but it can't hand back raw coordinates. Want me to pin the Eiffel Tower instead?"",""suggestions"":[""Drop a pin on the Eiffel Tower"",""Route from @me to Eiffel Tower"",""1 km buffer around the Eiffel Tower""]}","tool reply",""
+"opencode:big-pickle","dc6712b3","g09","0","true","true","true","12283","19327","48","route","{""waypoints"":[""Mumbai"",""Pune""],""profile"":""driving""}","",""
+"opencode:big-pickle","dc6712b3","m01","0","true","true","true","9255","15281","32","route","{""waypoints"":[""Bengaluru"",""Mysuru""],""profile"":""walking""}","",""
+"opencode:big-pickle","dc6712b3","m03","0","true","true","true","10302","13222","34","isochrone","{""center"":""Koramangala, Bengaluru"",""profile"":""cycling"",""unit"":""minutes"",""values"":[30]}","",""
+"opencode:big-pickle","dc6712b3","s01","0","true","true","true","10540","14484","47","plan","{""steps"":[""Show a 10 km buffer around Connaught Place, New Delhi"",""Show a 30 min driving isochrone from India Gate, New Delhi""]}","",""

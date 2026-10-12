@@ -1,0 +1,7 @@
+model,prompt_v,id,run,ok,tool_ok,valid,ms,in_tok,out_tok,tool,args,why,raw
+"opencode:nemotron-3.5-lightning-free","dc6712b3","g01","0","false","false","false","71144","21692","29","bash","{""command"":""echo 'Hampi is located in Karnataka, India at 15.3352° N, 76.4603° E. It's in Vijayanagara district, along the Tungabhadra River, near the town of Hospet (13 km away).'""}","tool bash",""
+"opencode:nemotron-3.5-lightning-free","dc6712b3","g05","0","true","true","true","33540","21695","29","markers","{""places"":[""Eiffel Tower""]}","",""
+"opencode:nemotron-3.5-lightning-free","dc6712b3","g09","0","false","false","false","102009","21722","43","websearch","{""query"":""Mumbai Pune driving directions""}","tool websearch",""
+"opencode:nemotron-3.5-lightning-free","dc6712b3","m01","0","true","true","true","62230","21754","46","route","{""waypoints"":[""Bengaluru"",""Mysuru""],""profile"":""walking""}","",""
+"opencode:nemotron-3.5-lightning-free","dc6712b3","m03","0","true","true","true","83020","21767","67","isochrone","{""center"":""Koramangala, Bengaluru"",""profile"":""cycling"",""unit"":""minutes"",""values"":[30]}","",""
+"opencode:nemotron-3.5-lightning-free","dc6712b3","s01","0","true","true","true","159255","21712","101","plan","{""steps"":[""10 km buffer around Connaught Place"",""30 min drive isochrone from India Gate""]}","",""
