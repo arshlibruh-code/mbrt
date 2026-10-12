@@ -1,0 +1,13 @@
+{
+  "name": "mbrt-eval",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dry": "node run.js --dry",
+    "haiku": "node run.js --model claude-haiku-5-5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "ajv": "^8.20.0"
+  }
+}
