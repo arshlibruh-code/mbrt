@@ -1,5 +1,6 @@
-// The tools overlay: the same tools Theo calls, as a form in plain words. It reads and writes exactly
-// the schema's arguments, so a call Theo made can be mirrored in, edited and run again by hand.
+// The TOOL tab: the same tools Theo calls, as a form in plain words. It reads and writes exactly the schema's
+// arguments, so a call Theo made can be mirrored in, edited and run again by hand. Places can be picked on the map,
+// found places show as ghost pins (onGhosts), and the Run button reads out the call it will make.
 
 const I = (d) => `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 
@@ -12,8 +13,9 @@ const TILES = [
   ["polygon", "Area", "A filled shape between places", I('<path d="M3 12.5 5.5 3 13 5.5 11.5 13z"/>')],
   ["elevation_profile", "Elevation", "Height chart along a route", I('<path d="M1.5 13 5.2 6.5l2.6 3.6 3-6 3.7 8.9z"/>')],
   ["boundary", "Boundary", "The official outline of a country, state or city", I('<path d="M3 4.5 7 2.5l6 2-1 7-5 2.5-4.5-3z" stroke-dasharray="2 1.6"/>')],
-  ["map", "Map", "Basemap, zoom, coordinates, 3D terrain, clear", I('<path d="M8 2.5 14 5.5 8 8.5 2 5.5z"/><path d="M2 8.5l6 3 6-3"/><path d="M2 11.5l6 3 6-3"/>')],
 ];
+export const TOOL_ICONS = Object.fromEntries(TILES.map(([name, , , icon]) => [name, icon]));
+const AIM = I('<circle cx="8" cy="8" r="4.2"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3"/>');
 
 const PROFILES = [
   ["driving", "drive", I('<path d="M2.5 10.8V8.2L4 4.8h8l1.5 3.4v2.6z"/><circle cx="5" cy="11.3" r="1.3"/><circle cx="11" cy="11.3" r="1.3"/>')],
@@ -21,8 +23,6 @@ const PROFILES = [
   ["cycling", "cycle", I('<circle cx="3.8" cy="11" r="2.6"/><circle cx="12.2" cy="11" r="2.6"/><path d="M3.8 11 6.6 6h4.2l1.4 5M6.6 6l2.8 5"/>')],
 ];
 
-const MAP_ACTIONS = [["style", "basemap"], ["zoom", "zoom to level"], ["center", "go to coordinates"], ["terrain", "3D terrain on / off"], ["clear", "clear drawings"], ["locate", "my location"]];
-const CLEAR = ["all", "markers", "routes", "lines", "buffers", "isochrones", "polygons"];
 
 // what each tool asks for, in words; keys are the schema's
 const FORMS = {
@@ -34,7 +34,6 @@ const FORMS = {
   polygon: [{ key: "vertices", ui: "stops", label: "corners", one: "corner", min: 3 }],
   elevation_profile: [{ key: "waypoints", ui: "stops", label: "along", one: "stop", min: 1, hint: 'two places, or "@selected" for a line you picked' }, { key: "profile", ui: "profile" }],
   boundary: [{ key: "place", ui: "place", label: "region" }],
-  map: [{ ui: "mapaction" }],
 };
 
 const DEFAULTS = {
@@ -46,23 +45,39 @@ const DEFAULTS = {
   polygon: { vertices: ["Rome", "Florence", "Venice"] },
   elevation_profile: { waypoints: ["Chamonix", "Zermatt"], profile: "driving" },
   boundary: { place: "Iceland" },
-  map: { action: "style", style: "satellite" },
 };
 
 const el = (tag, cls, html = "") => Object.assign(document.createElement(tag), { className: cls, innerHTML: html });
 const numbers = (s) => s.split(/[,\s]+/).filter(Boolean).map(Number).filter(Number.isFinite);
 
-export function createToolsForm(root, { lookup }) {
-  let tool = "isochrone";
-  const tiles = root.querySelector("#tiles"), desc = root.querySelector("#desc"), fields = root.querySelector("#fields");
+export function createToolsForm(root, { lookup, describe, pickOnMap, onGhosts }) {
+  let tool = "isochrone", from = "", touched = false;
+  const tiles = root.querySelector("#tiles"), desc = root.querySelector("#desc"), fields = root.querySelector("#fields"), run = root.querySelector("#run");
 
-  tiles.append(...TILES.map(([name, label, , icon]) => {
-    const b = el("button", "tile", `${icon}<span>${label}</span>`);
+  tiles.append(...TILES.map(([name, label, , icon], i) => {
+    const b = el("button", "tile", icon);
     b.type = "button";
     b.dataset.tool = name;
+    b.title = `${label}  (${i + 1})`;
+    b.setAttribute("aria-label", label);
     b.addEventListener("click", () => api.set(name));
     return b;
   }));
+
+  // the Run button says the call it will make; a call mirrored from Theo reads "run again" until you edit it
+  function syncRun() {
+    const call = api.read();
+    run.textContent = `${from && !touched ? "Run again" : "Run"} · ${describe(call).replace(/^[^·]+· /, "")}`;
+    const [, label, words] = TILES.find((t) => t[0] === tool);
+    desc.innerHTML = `<b>${label}</b> ${words.toLowerCase()}${from ? `<em>${touched ? "edited from" : "from"} ${from}</em>` : ""}`;
+  }
+  const changed = () => ((touched = true), syncRun());
+  fields.addEventListener("input", changed);
+  fields.addEventListener("change", changed);
+
+  // found places show on the map as ghost pins while you edit
+  const found = new Map();
+  const ghosts = () => onGhosts([...found].filter(([input]) => input.isConnected).map(([, c]) => c));
 
   // a place name checked against the geocoder as you leave the field
   function checked(input) {
@@ -70,6 +85,8 @@ export function createToolsForm(root, { lookup }) {
     const check = async () => {
       const v = input.value.trim();
       status.className = "found";
+      found.delete(input);
+      ghosts();
       if (!v) return (status.textContent = "");
       if (v.startsWith("@")) return (status.textContent = v === "@me" ? "your location" : "the selected feature");
       status.textContent = "checking…";
@@ -77,10 +94,26 @@ export function createToolsForm(root, { lookup }) {
       if (input.value.trim() !== v) return;
       status.textContent = hit ? `✓ ${hit.found}` : "✗ not found";
       status.classList.add(hit ? "ok" : "bad");
+      if (hit) found.set(input, hit.coord), ghosts();
     };
     input.addEventListener("change", check);
     if (input.value) check();
     return status;
+  }
+  // the crosshair beside a place: the next click on the map fills it with the place there
+  function aim(input) {
+    const b = el("button", "aim", AIM);
+    b.type = "button";
+    b.title = "pick on the map";
+    b.addEventListener("click", async () => {
+      b.setAttribute("aria-pressed", true);
+      const name = await pickOnMap().catch(() => "");
+      b.setAttribute("aria-pressed", false);
+      if (!name) return;
+      input.value = name;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    return b;
   }
 
   const head = (text, hint) => el("div", "flabel", `<span>${text}</span>${hint ? `<i>${hint}</i>` : ""}`);
@@ -94,6 +127,7 @@ export function createToolsForm(root, { lookup }) {
       const row = el("div", "stop", `<span class="grip" title="drag to reorder">⋮⋮</span><input placeholder="${spec.one}"><button type="button" class="x" title="remove">×</button>`);
       const input = row.querySelector("input");
       input.value = v;
+      input.after(aim(input));
       row.append(checked(input));
       row.draggable = true;
       row.addEventListener("dragstart", () => (dragged = row));
@@ -103,7 +137,8 @@ export function createToolsForm(root, { lookup }) {
         const after = e.offsetY > row.offsetHeight / 2;
         list.insertBefore(dragged, after ? row.nextSibling : row);
       });
-      row.querySelector(".x").addEventListener("click", () => list.children.length > spec.min && row.remove());
+      row.addEventListener("dragend", changed);
+      row.querySelector(".x").addEventListener("click", () => list.children.length > spec.min && (row.remove(), ghosts(), changed()));
       list.append(row);
       return input;
     };
@@ -120,23 +155,55 @@ export function createToolsForm(root, { lookup }) {
     box.dataset.key = spec.key;
     const input = el("input", "");
     input.value = v;
-    box.append(head(spec.label), input, checked(input));
+    const row = el("div", "unitrow");
+    row.append(input, aim(input));
+    box.append(head(spec.label), row, checked(input));
     return box;
   }
 
+  // numbers as chips: type and press enter, space or comma; backspace on an empty field takes the last one back
+  function numChips(values, suffix, sorted = false) {
+    const box = el("div", "numchips");
+    const input = Object.assign(el("input", "nadd"), { placeholder: "+ add", inputMode: "decimal" });
+    const add = (n) => {
+      const c = el("button", "nchip", `${n}<i>×</i>`);
+      c.type = "button";
+      c.dataset.v = n;
+      c.title = "remove";
+      c.addEventListener("click", () => (c.remove(), changed()));
+      const after = sorted && [...box.querySelectorAll(".nchip")].find((o) => Number(o.dataset.v) > n);
+      box.insertBefore(c, after || input);
+    };
+    const commit = () => {
+      if (!input.value.trim()) return;
+      numbers(input.value).forEach(add);
+      input.value = "";
+      changed();
+    };
+    input.addEventListener("keydown", (e) => {
+      if (["Enter", ",", " "].includes(e.key)) e.preventDefault(), commit();
+      else if (e.key === "Backspace" && !input.value) [...box.querySelectorAll(".nchip")].at(-1)?.remove(), changed();
+    });
+    input.addEventListener("blur", commit);
+    box.append(input, el("b", "", suffix));
+    values.forEach(add);
+    return box;
+  }
+  const chipValues = (box) => [...box.querySelectorAll(".nchip")].map((c) => Number(c.dataset.v)).concat(numbers(box.querySelector(".nadd").value));
+
   function nums(spec, v = []) {
-    const box = el("div", "field nums", `<div class="unitrow"><input><b>${spec.suffix}</b></div>`);
+    const box = el("div", "field nums");
     box.dataset.key = spec.key;
-    box.querySelector("input").value = v.join(", ");
-    box.prepend(head(spec.label, spec.hint));
+    box.append(head(spec.label, spec.hint), numChips(v, spec.suffix));
     return box;
   }
 
   function reach(args) {
-    const box = el("div", "field reach", `<div class="unitrow"><input><select><option value="minutes">min</option><option value="km">km</option></select></div>`);
-    box.querySelector("input").value = (args.values ?? []).join(", ");
-    box.querySelector("select").value = args.unit ?? "minutes";
-    box.prepend(head("reach", "one value, or several for rings: 10, 20, 30"));
+    const box = el("div", "field reach");
+    const unit = segmented("unit", [["minutes", "min"], ["km", "km"]], args.unit ?? "minutes");
+    const row = el("div", "unitrow");
+    row.append(numChips(args.values ?? [], "", true), unit);
+    box.append(head("reach", "several values draw rings"), row);
     return box;
   }
 
@@ -150,7 +217,7 @@ export function createToolsForm(root, { lookup }) {
       b.addEventListener("click", () => {
         box.dataset.value = v;
         for (const o of box.children) o.setAttribute("aria-pressed", o === b);
-        box.dispatchEvent(new Event("change"));
+        box.dispatchEvent(new Event("change", { bubbles: true }));
       });
       box.append(b);
     }
@@ -164,65 +231,44 @@ export function createToolsForm(root, { lookup }) {
     return box;
   }
 
-  function mapaction(args) {
-    const box = el("div", "field mapaction");
-    const sel = el("select", "", MAP_ACTIONS.map(([v, l]) => `<option value="${v}">${l}</option>`).join(""));
-    sel.value = args.action ?? "style";
-    const sub = el("div", "sub");
-    const draw = () => {
-      sub.replaceChildren();
-      const a = sel.value;
-      if (a === "style") sub.append(segmented("style", [["satellite", "satellite"], ["dark", "dark"], ["street", "street"]], args.style ?? "satellite"));
-      if (a === "zoom") sub.append(el("div", "unitrow", `<input type="number" step="any" class="zoom" value="${args.zoom ?? 10}"><b>level</b>`));
-      if (a === "center") sub.append(el("div", "unitrow", `<input type="number" step="any" class="lat" placeholder="lat" value="${args.lat ?? ""}"><input type="number" step="any" class="lon" placeholder="lon" value="${args.lon ?? ""}">`));
-      if (a === "clear") sub.append(el("select", "clear", CLEAR.map((c) => `<option>${c}</option>`).join("")));
-      if (a === "clear" && args.clear) sub.querySelector(".clear").value = args.clear;
-    };
-    sel.addEventListener("change", draw);
-    draw();
-    box.append(head("do"), sel, sub);
-    return box;
-  }
-
   function render(args) {
-    desc.textContent = TILES.find((t) => t[0] === tool)[2];
+    found.clear();
     for (const b of tiles.children) b.setAttribute("aria-pressed", b.dataset.tool === tool);
     fields.replaceChildren(...FORMS[tool].map((spec) => {
       if (spec.ui === "stops") return stops(spec, args[spec.key]);
       if (spec.ui === "place") return place(spec, args[spec.key]);
       if (spec.ui === "numbers") return nums(spec, args[spec.key]);
       if (spec.ui === "reach") return reach(args);
-      if (spec.ui === "profile") return profile(spec, args.profile);
-      return mapaction(args);
+      return profile(spec, args.profile);
     }));
+    ghosts();
+    syncRun();
   }
 
   const api = {
     get tool() { return tool; },
-    // show a tool; with args it mirrors a call, without it starts from an example
-    set(name, args) {
-      tool = FORMS[name] ? name : "isochrone";
+    // show a tool; with args it mirrors a call (`by` says whose, e.g. Theo), without it starts from an example
+    set(name, args, by = "") {
+      if (!FORMS[name]) return;
+      tool = name;
+      from = args ? by : "";
+      touched = false;
       render(args ?? DEFAULTS[tool]);
     },
+    pick: (i) => TILES[i] && api.set(TILES[i][0]),
+    clearGhosts: () => onGhosts([]),
+    showGhosts: ghosts,
     read() {
       const args = {};
       for (const box of fields.children) {
         const key = box.dataset.key;
         if (box.classList.contains("stops")) args[key] = [...box.querySelectorAll(".stop input")].map((i) => i.value.trim()).filter(Boolean);
         else if (box.classList.contains("place")) { const v = box.querySelector("input").value.trim(); if (v) args[key] = v; }
-        else if (box.classList.contains("nums")) args[key] = numbers(box.querySelector("input").value);
+        else if (box.classList.contains("nums")) args[key] = chipValues(box);
         else if (box.classList.contains("reach")) {
-          args.values = numbers(box.querySelector("input").value);
-          args.unit = box.querySelector("select").value;
+          args.values = chipValues(box);
+          args.unit = box.querySelector(".seg.unit").dataset.value;
         } else if (box.classList.contains("profile")) args.profile = box.querySelector(".seg").dataset.value;
-        else if (box.classList.contains("mapaction")) {
-          args.action = box.querySelector("select").value;
-          const s = box.querySelector(".sub");
-          if (args.action === "style") args.style = s.querySelector(".seg").dataset.value;
-          if (args.action === "zoom") args.zoom = Number(s.querySelector(".zoom").value);
-          if (args.action === "center") (args.lat = Number(s.querySelector(".lat").value)), (args.lon = Number(s.querySelector(".lon").value));
-          if (args.action === "clear") args.clear = s.querySelector(".clear").value;
-        }
       }
       return { tool, args };
     },

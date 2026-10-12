@@ -30,23 +30,70 @@
     .mark { display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 7px; }
     .mark svg { display: block; }
 
-    /* tools: an overlay on the map, opened from the top-left */
-    #tools { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(360px, 92vw); max-height: 70vh; overflow-y: auto; z-index: 4; padding: 12px; }
-    body:not(.tools-open) #tools { display: none; }
-    #desc { color: var(--ink2); margin: 8px 0 10px; min-height: 18px; }
-    #tools-close { position: absolute; top: 6px; right: 8px; width: 26px; height: 26px; background: none; border: 0; color: var(--ink2); font: 18px/1 var(--font); cursor: pointer; }
-    #tools-close:hover { color: #fff; }
-    #tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 18px 0 0; }
-    .tile { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px 7px; cursor: pointer; color: var(--ink2);
-      background: var(--field); border: 1px solid var(--hair); font: 700 10px var(--font); letter-spacing: .1em; text-transform: uppercase; }
+    /* the panel: a sheet docked left (the map slides right to stay in view), a bottom sheet on phones */
+    #tools { position: fixed; top: 54px; left: 12px; max-height: calc(100vh - 54px - var(--bar-h) - 12px); width: 340px; z-index: 4; display: flex; flex-direction: column;
+      transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .2s; }
+    body:not(.tools-open) #tools { transform: translateX(calc(-100% - 24px)); opacity: 0; pointer-events: none; }
+    .ptabs { display: flex; border-bottom: 1px solid var(--hair); flex: none; }
+    .ptabs button { flex: 1; padding: 10px 0 9px; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;
+      color: var(--ink2); font: 700 10px var(--font); letter-spacing: .14em; text-transform: uppercase; }
+    .ptabs button:hover { color: var(--ink); }
+    .ptabs i { font-style: normal; color: var(--muted); font-weight: 400; }
+    #tools[data-tab="tool"] .ptabs [data-tab="tool"], #tools[data-tab="layers"] .ptabs [data-tab="layers"],
+    #tools[data-tab="brain"] .ptabs [data-tab="brain"], #tools[data-tab="map"] .ptabs [data-tab="map"] { color: #fff; border-bottom-color: var(--cyan); }
+    #tools-close { flex: 0 0 36px; font: 18px/1 var(--font); letter-spacing: 0; }
+    .ppane { flex: 1; min-height: 0; overflow: hidden auto; padding: 12px; scrollbar-width: thin; }
+    #tools:not([data-tab="tool"]) [data-pane="tool"], #tools:not([data-tab="layers"]) [data-pane="layers"],
+    #tools:not([data-tab="brain"]) [data-pane="brain"], #tools:not([data-tab="map"]) [data-pane="map"] { display: none; }
+    #pfoot { flex: none; border: 0; border-top: 1px solid var(--hair); background: none; padding: 8px 12px; text-align: left; cursor: pointer; color: var(--muted);
+      font: 10px var(--font); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #pfoot:hover { color: var(--cyan); }
+    #desc { color: var(--ink2); margin: 10px 0 12px; min-height: 18px; font-size: 12px; }
+    #desc b { color: #fff; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; margin-right: 6px; }
+    #desc em { float: right; font-style: normal; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--cyan); }
+    #tiles { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0; }
+    .tile { display: grid; place-items: center; height: 36px; padding: 0; margin-left: -1px; cursor: pointer; color: var(--ink2);
+      background: var(--field); border: 1px solid var(--hair); }
     .tile:hover { color: var(--ink); }
-    .tile[aria-pressed="true"] { color: #fff; border-color: var(--cyan); background: rgba(8, 155, 223, 0.12); }
+    .tile[aria-pressed="true"] { color: #fff; border-color: var(--cyan); background: rgba(8, 155, 223, 0.12); position: relative; }
     .field { margin-bottom: 10px; }
     .flabel { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
     .flabel span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink2); }
     .flabel i { font-style: normal; font-size: 10px; color: var(--muted); }
-    .stop { display: grid; grid-template-columns: 14px 1fr 22px; align-items: center; gap: 4px; margin-bottom: 4px; }
-    .stop .found { grid-column: 2 / 4; }
+    .stop { display: grid; grid-template-columns: 14px 1fr 30px 22px; align-items: center; gap: 4px; margin-bottom: 4px; }
+    .stop .found { grid-column: 2 / 5; }
+    .aim { width: 30px; height: 30px; flex: none; display: grid; place-items: center; cursor: crosshair; color: var(--muted); background: var(--field); border: 1px solid var(--hair); padding: 0; }
+    .aim:hover, .aim[aria-pressed="true"] { color: var(--cyan); border-color: var(--cyan); }
+    body.picking #map .maplibregl-canvas { cursor: crosshair; }
+    #pick-hint { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5; padding: 6px 12px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--cyan); }
+    body:not(.picking) #pick-hint { display: none; }
+    .numchips { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 3px; min-height: 32px; background: var(--field); border: 1px solid var(--hair); }
+    .numchips:focus-within { outline: 1px solid var(--cyan); outline-offset: -1px; }
+    .nchip { display: flex; gap: 5px; align-items: baseline; padding: 3px 6px; cursor: pointer; color: #fff; background: rgba(8, 155, 223, 0.16); border: 1px solid rgba(8, 155, 223, 0.5); font: 12px var(--font); font-variant-numeric: tabular-nums; }
+    .nchip i { font-style: normal; color: var(--muted); }
+    .nchip:hover i { color: #fff; }
+    #tools .numchips .nadd { flex: 1; min-width: 50px; width: auto; border: 0; background: none; padding: 3px 4px; outline: none; }
+    .numchips b { padding-right: 6px; }
+    .reach .unitrow .seg { flex: 0 0 96px; }
+    #run { width: 100%; margin-top: 6px; border: 1px solid var(--ink); padding: 10px 8px; cursor: pointer; font: 700 11px var(--font); letter-spacing: .12em; text-transform: uppercase;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hintline { color: var(--muted); font-size: 12px; margin: 4px 0 12px; }
+    #layers { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+    #layers:empty { display: none; }
+    #layers:not(:empty) + #no-layers { display: none; }
+    .layer { display: grid; grid-template-columns: 16px 1fr auto; gap: 8px; align-items: center; padding: 7px 8px; background: var(--field); border: 1px solid var(--hair); cursor: pointer; }
+    .layer:hover { border-color: rgba(255, 255, 255, 0.2); }
+    .layer.sel { border-color: var(--cyan); background: rgba(8, 155, 223, 0.1); }
+    .layer.off { opacity: 0.45; }
+    .layer > svg { color: var(--ink2); }
+    .layer .what { min-width: 0; }
+    .layer .what b { display: block; font-weight: 400; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .layer .what small { display: block; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .layer .acts { display: flex; gap: 2px; }
+    .layer .acts button { width: 24px; height: 24px; display: grid; place-items: center; padding: 0; background: none; border: 0; color: var(--muted); cursor: pointer; font: 13px var(--font); }
+    .layer .acts button:hover { color: #fff; }
+    .brain-btn.wide { width: 100%; }
+    #m-go { flex: 0 0 52px; }
     .grip { color: var(--muted); cursor: grab; font-size: 11px; letter-spacing: -2px; user-select: none; }
     .stop .x, .more { background: none; border: 0; color: var(--muted); cursor: pointer; font: 14px var(--font); }
     .stop .x:hover, .more:hover { color: #fff; }
@@ -56,7 +103,7 @@
     .found.bad { color: var(--bad); }
     .unitrow { display: flex; gap: 4px; align-items: center; }
     .unitrow input { flex: 1; }
-    .unitrow b, .unitrow select { flex: none; width: auto; font-size: 11px; color: var(--ink2); letter-spacing: .08em; text-transform: uppercase; }
+    .unitrow b { flex: none; font-size: 11px; color: var(--ink2); letter-spacing: .08em; text-transform: uppercase; }
     .seg { display: flex; gap: 0; }
     .seg button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 4px; cursor: pointer; color: var(--ink2);
       background: var(--field); border: 1px solid var(--hair); margin-left: -1px; font: 11px var(--font); letter-spacing: .06em; }
@@ -74,16 +121,7 @@
     .row button { flex: 1; cursor: pointer; padding: 8px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; }
     #run { background: var(--ink); color: #0b0d10; border-color: var(--ink); }
     #run:disabled { opacity: 0.5; cursor: wait; }
-    /* the brain row: who answers, folded to one line until opened */
-    #brain { margin-top: 12px; border-top: 1px solid var(--hair); padding-top: 8px; }
-    .brain-head { display: flex; width: 100%; align-items: baseline; gap: 8px; background: none; border: 0; padding: 2px 0; cursor: pointer; color: var(--ink); font: 12px var(--font); text-align: left; }
-    .brain-head span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink2); }
-    .brain-head b { flex: 1; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .brain-head i { font-style: normal; color: var(--muted); transition: transform .2s; }
-    #brain.open .brain-head i { transform: rotate(180deg); }
-    #brain:not(.open) .brain-body { display: none; }
-    .brain-body { margin-top: 8px; }
-    .brain-body .seg button { text-transform: uppercase; font-size: 10px; letter-spacing: .1em; }
+    #brain .seg button, #tools [data-pane="map"] .seg button { text-transform: uppercase; font-size: 10px; letter-spacing: .1em; }
     .brain-pane { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
     .brain-pane .found { margin: 0; }
     .brain-btn { cursor: pointer; padding: 7px 8px; font: 700 11px var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); background: var(--field); border: 1px solid var(--hair); }
@@ -192,6 +230,8 @@
     @media (max-width: 700px) {
       #chat { padding: 3vh 16px calc(3vh + env(safe-area-inset-bottom)); }
       #msg { font-size: 20px; }
+      #tools { top: auto; left: 0; right: 0; width: auto; bottom: var(--bar-h); max-height: 58vh; border-left: 0; border-right: 0; }
+      body:not(.tools-open) #tools { transform: translateY(calc(100% + var(--bar-h))); }
 
     }
   </style>
@@ -199,16 +239,31 @@
 <body>
   <div id="map"></div>
   <header id="top"><span class="mark glass" aria-label="mbrt"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6" fill="none" stroke="#e9ebed" stroke-width="1.8"/><rect x="25.4" y="3" width="3.6" height="3.6" fill="#089BDF"/><path d="M9.5 23V11h13v12M16 11v12" fill="none" stroke="#e9ebed" stroke-width="3.4"/></svg><svg height="17" viewBox="-24 -809 2993 918" aria-hidden="true"><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="#08080c" stroke="#d9e2df" stroke-width="109" paint-order="stroke" stroke-linejoin="miter"/><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="none" stroke="#08080c" stroke-width="38" stroke-linejoin="miter"/></svg></span></header>
-  <section id="tools" class="glass">
-    <button type="button" id="tools-close" title="close (esc)" aria-label="close tools">×</button>
-    <form id="form" autocomplete="off">
-      <div id="tiles"></div>
-      <p id="desc"></p>
-      <div id="fields"></div>
-      <div class="row"><button id="run" type="submit">Run</button><button id="clear" type="button">Clear map</button></div>
-    </form>
-    <div id="brain"></div>
-  </section>
+  <aside id="tools" class="glass" data-tab="tool">
+    <nav class="ptabs"><button type="button" data-tab="tool">tool</button><button type="button" data-tab="layers">layers <i id="layer-count"></i></button><button type="button" data-tab="brain">brain</button><button type="button" data-tab="map">map</button><button type="button" id="tools-close" title="close (esc)" aria-label="close panel">×</button></nav>
+    <div class="ppane" data-pane="tool">
+      <form id="form" autocomplete="off">
+        <div id="tiles"></div>
+        <p id="desc"></p>
+        <div id="fields"></div>
+        <button id="run" type="submit">Run</button>
+      </form>
+    </div>
+    <div class="ppane" data-pane="layers">
+      <ol id="layers"></ol>
+      <p id="no-layers" class="hintline">Nothing on the map yet. Ask Theo, or run a tool.</p>
+      <div class="row"><button id="export" type="button" title="download what is shown as GeoJSON">Export</button><button id="clear" type="button">Clear map</button></div>
+    </div>
+    <div class="ppane" data-pane="brain"><div id="brain"></div></div>
+    <div class="ppane" data-pane="map">
+      <div class="field"><div class="flabel"><span>basemap</span></div><div class="seg" id="m-base"><button type="button" data-v="satellite">sat</button><button type="button" data-v="dark">dark</button><button type="button" data-v="street">map</button></div></div>
+      <div class="field"><div class="flabel"><span>terrain</span></div><div class="seg" id="m-terrain"><button type="button" data-v="off">flat</button><button type="button" data-v="on">3D</button></div></div>
+      <div class="field"><div class="flabel"><span>go to</span><i>lat, lon</i></div><div class="unitrow"><input id="m-coords" placeholder="12.9716, 77.5946"><button type="button" class="brain-btn" id="m-go">go</button></div></div>
+      <button type="button" class="brain-btn wide" id="m-locate">my location</button>
+    </div>
+    <button type="button" id="pfoot" title="choose the brain"></button>
+  </aside>
+  <div id="pick-hint" class="glass">click the map to pick a place · esc cancels</div>
   <section id="feed">
     <div id="log"></div>
   </section>

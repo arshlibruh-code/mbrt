@@ -6,7 +6,7 @@ import Ajv from "ajv";
 import { TOOLS } from "../eval/tools.js";
 import golden from "../eval/golden.json";
 import { execute, placeNear, knownMe, lookup } from "./execute.js";
-import { createToolsForm } from "./tools-form.js";
+import { createToolsForm, TOOL_ICONS } from "./tools-form.js";
 import { createBarFx } from "./bar-fx.js";
 import * as brain from "./brain.js";
 import { createBrainPicker } from "./brain-picker.js";
@@ -66,18 +66,39 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · Photon · FOSSGIS · Nominatim' }), "bottom-right");
 new ResizeObserver(() => {
   document.documentElement.style.setProperty("--bar-h", `${$("chat").offsetHeight}px`);
-  map.setPadding({ top: 0, left: 0, right: 0, bottom: $("chat").offsetHeight }); // center the globe in the space above the bar
+  padMap(0); // center the globe in the space above the bar, and right of the panel when it is open
 }).observe($("chat"));
 
 // ---- tools overlay
 
-const setTools = (open) => {
+// docked left on wide screens, so the map slides right to keep what you're editing in view; a bottom sheet on phones
+const narrow = matchMedia("(max-width: 700px)");
+const toolsOpen = () => document.body.classList.contains("tools-open");
+const padMap = (duration = 320) => {
+  const left = toolsOpen() && !narrow.matches ? $("tools").offsetWidth + 12 : 0;
+  map.easeTo({ padding: { top: 0, right: 0, left, bottom: $("chat").offsetHeight }, duration });
+};
+function setTools(open, tab) {
+  if (tab) $("tools").dataset.tab = tab;
   document.body.classList.toggle("tools-open", open);
   $("tools-open").setAttribute("aria-pressed", open);
-};
-$("tools-open").addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
+  padMap();
+  if (open && $("tools").dataset.tab === "tool") form.showGhosts();
+  else form.clearGhosts();
+}
+$("tools-open").addEventListener("click", () => setTools(!toolsOpen()));
 $("tools-close").addEventListener("click", () => setTools(false));
-addEventListener("keydown", (e) => e.key === "Escape" && setTools(false));
+for (const b of document.querySelectorAll(".ptabs [data-tab]")) b.addEventListener("click", () => setTools(true, b.dataset.tab));
+$("pfoot").addEventListener("click", () => setTools(true, "brain"));
+
+// keys: / opens the panel, 1-8 pick a tool, Esc cancels a map pick or closes the panel
+addEventListener("keydown", (e) => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
+  if (e.key === "Escape") return picking ? picking(null) : setTools(false);
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === "/") e.preventDefault(), setTools(true, "tool");
+  else if (toolsOpen() && /^[1-8]$/.test(e.key)) setTools(true, "tool"), form.pick(Number(e.key) - 1);
+});
 const syncFeed = () => document.body.classList.toggle("has-feed", $("log").children.length > 0);
 
 // ---- turns: each message gets its own block above the bar; the last 3 stay (the same 3 Theo remembers),
@@ -127,6 +148,7 @@ function setBasemap(name) {
   map.setStyle(STYLES[name], { diff: false });
   const b = document.querySelector(".basemap-btn");
   if (b) (b.textContent = SHORT[name]), (b.title = `basemap: ${name}, click for ${nextBasemap(name)}`);
+  syncMapTab();
 }
 map.addControl({
   onAdd() {
@@ -212,12 +234,40 @@ function addLayers() {
     layout: { ...text, "text-offset": [0, -0.9], "text-anchor": "bottom" }, paint: halo });
   map.addLayer({ id: "line-labels", type: "symbol", source: "drawn", filter: isKind(LINES),
     layout: { ...text, "symbol-placement": "line-center" }, paint: halo });
+  map.addSource("ghosts", { type: "geojson", data: ghostData });
+  map.addLayer({ id: "ghosts", type: "circle", source: "ghosts",
+    paint: { "circle-radius": 6, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#089bdf", "circle-stroke-width": 1.5, "circle-stroke-opacity": 0.85 } });
   if (terrainOn) setTerrain(true);
 }
 map.on("style.load", addLayers);
 
+// found places in the TOOL tab, drawn as hollow pins until the tool runs
+let ghostData = { type: "FeatureCollection", features: [] };
+function onGhosts(coords) {
+  ghostData = { type: "FeatureCollection", features: coords.map((c) => ({ type: "Feature", geometry: { type: "Point", coordinates: c }, properties: {} })) };
+  map.getSource("ghosts")?.setData(ghostData);
+}
+
+// pick on map: the next click resolves to the place under it
+let picking = null;
+function pickOnMap() {
+  picking?.(null);
+  document.body.classList.add("picking");
+  stopSpin();
+  return new Promise((resolve) => {
+    picking = (lngLat) => {
+      picking = null;
+      document.body.classList.remove("picking");
+      if (!lngLat) return resolve("");
+      const coord = [lngLat.lng, lngLat.lat];
+      placeNear(coord).then((name) => resolve(name || `${coord[1].toFixed(5)}, ${coord[0].toFixed(5)}`)).catch(() => resolve(`${coord[1].toFixed(5)}, ${coord[0].toFixed(5)}`));
+    };
+  });
+}
+
 const refresh = () => {
-  map.getSource("drawn")?.setData({ type: "FeatureCollection", features: drawn });
+  map.getSource("drawn")?.setData({ type: "FeatureCollection", features: drawn.filter((f) => !f.properties.hidden) });
+  renderLayers();
   for (const id of ["selected-line", "selected-point"]) {
     if (!map.getLayer(id)) continue;
     const geom = id === "selected-point" ? ["==", ["geometry-type"], "Point"] : ["!=", ["geometry-type"], "Point"];
@@ -227,6 +277,7 @@ const refresh = () => {
 
 function setTerrain(on) {
   terrainOn = on;
+  syncMapTab();
   if (on) {
     if (!map.getSource("dem")) map.addSource("dem", DEM);
     map.setTerrain({ source: "dem", exaggeration: 1.5 });
@@ -276,6 +327,7 @@ async function mapAction(a) {
 // ---- selection: click a drawn feature, then use "@selected" in a field
 
 map.on("click", (e) => {
+  if (picking) return picking(e.lngLat);
   const hit = map.queryRenderedFeatures(e.point, { layers: ["points", "lines", "straight", "area-fill"] })[0];
   selectedFid = hit?.properties.fid ?? 0;
   refresh();
@@ -285,6 +337,60 @@ for (const id of ["points", "lines", "straight", "area-fill"]) {
   map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
   map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
 }
+
+// ---- LAYERS tab: every result on the map, one row per run: show / hide, select, edit and rerun, delete
+
+const runs = () => {
+  const byRun = new Map();
+  for (const f of drawn) {
+    const r = f.properties.run ?? 0;
+    if (!byRun.has(r)) byRun.set(r, []);
+    byRun.get(r).push(f);
+  }
+  return [...byRun.values()].reverse(); // newest first
+};
+function renderLayers() {
+  const list = runs();
+  $("layer-count").textContent = list.length || "";
+  $("layers").replaceChildren(...list.map((feats) => {
+    const p = feats[0].properties, off = feats.every((f) => f.properties.hidden);
+    const li = document.createElement("li");
+    li.className = `layer${feats.some((f) => f.properties.fid === selectedFid) ? " sel" : ""}${off ? " off" : ""}`;
+    li.innerHTML = `${TOOL_ICONS[p.tool] ?? TOOL_ICONS.markers}<span class="what"><b></b><small></small></span>
+      <span class="acts"><button type="button" data-a="eye" title="${off ? "show" : "hide"}">${off ? "○" : "●"}</button><button type="button" data-a="edit" title="edit and run again">✎</button><button type="button" data-a="del" title="remove">×</button></span>`;
+    li.querySelector("b").textContent = p.call ? describe(p.call) : p.label;
+    li.querySelector("small").textContent = [p.result, `${feats.length} feature${feats.length > 1 ? "s" : ""}`].filter(Boolean).join(" · ");
+    li.addEventListener("click", (e) => {
+      const a = e.target.closest("button")?.dataset.a;
+      if (a === "eye") feats.forEach((f) => (f.properties.hidden = !off));
+      else if (a === "del") drawn = drawn.filter((f) => !feats.includes(f));
+      else if (a === "edit" && p.call) return form.set(p.call.tool, p.call.args, p.by), setTools(true, "tool");
+      else (selectedFid = (feats.find((f) => f.geometry.type !== "Point") ?? feats[0]).properties.fid), fitTo(feats);
+      refresh();
+    });
+    return li;
+  }));
+}
+$("export").addEventListener("click", () => {
+  const fc = { type: "FeatureCollection", features: drawn.filter((f) => !f.properties.hidden).map(({ properties: { fid, run, hidden, call, ...rest }, ...f }) => ({ ...f, properties: rest })) };
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([JSON.stringify(fc)], { type: "application/geo+json" })), download: "mbrt.geojson" });
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ---- MAP tab: the basemap, terrain, a place by coordinates, your location
+const syncMapTab = () => {
+  for (const b of $("m-base").children) b.setAttribute("aria-pressed", b.dataset.v === basemap);
+  for (const b of $("m-terrain").children) b.setAttribute("aria-pressed", (b.dataset.v === "on") === terrainOn);
+};
+$("m-base").addEventListener("click", (e) => e.target.dataset.v && (setBasemap(e.target.dataset.v), syncMapTab()));
+$("m-terrain").addEventListener("click", (e) => e.target.dataset.v && (setTerrain(e.target.dataset.v === "on"), syncMapTab()));
+$("m-go").addEventListener("click", () => {
+  const [lat, lon] = $("m-coords").value.split(/[,\s]+/).map(Number);
+  if (Number.isFinite(lat) && Number.isFinite(lon)) map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 12) });
+});
+$("m-coords").addEventListener("keydown", (e) => e.key === "Enter" && $("m-go").click());
+$("m-locate").addEventListener("click", () => runCall({ tool: "markers", args: { places: ["@me"] } }));
 
 // ---- the feed: your message, the pick in plain words, the steps, one result line
 
@@ -393,7 +499,7 @@ const baseCtx = { log, chart, result, suggest, mapAction, selected: () => drawn.
 
 const ajv = new Ajv({ strict: false, allErrors: true });
 const validate = Object.fromEntries(TOOLS.map((t) => [t.name, ajv.compile(t.input_schema)]));
-const form = createToolsForm($("form"), { lookup });
+const form = createToolsForm($("form"), { lookup, describe, pickOnMap, onGhosts });
 
 const clearFeed = () => {
   clearTimeout(settleTimer);
@@ -405,11 +511,12 @@ const clearFeed = () => {
 function run(e) {
   e.preventDefault();
   newTurn();
-  setTools(false); // the overlay sits on the map
+  if (narrow.matches) setTools(false); // the bottom sheet covers the map on a phone; docked, it stays open
   const call = form.read();
+  form.clearGhosts();
   pick("form", call);
   fx.state("thinking");
-  runCall(call).then((out) => {
+  runCall(call, undefined, true, "form").then((out) => {
     fx.state(out.ok ? "done" : "error");
     if (out.ok) remember({ user: `(by hand) ${describe(call)}`, calls: [{ ...call, result: out.result }] });
     else shake(), fail(out.err, { again: () => $("form").requestSubmit() });
@@ -512,7 +619,7 @@ function fail(err, { message, again }) {
   } else if (err.kind === "nomatch") {
     chips([["add a city and retry", edit], toolsChip]);
   } else if (err.kind === "key" || err.kind === "credits") {
-    chips([["change brain", () => (setTools(true), picker.open())], ["retry", again]]);
+    chips([["change brain", () => setTools(true, "brain")], ["retry", again]]);
   } else {
     chips([["retry", again], toolsChip, ["edit message", edit]]);
   }
@@ -692,8 +799,8 @@ async function ask(e) {
       const fixes = repairPlaces(call, item.step ?? message);
       pick(brain.label(), call, ms, item.model ?? first.model, item.by ?? first.by);
       if (fixes.length) log("warn", "fixed", `model misspelled ${fixes.join(", ")}`);
-      form.set(call.tool, call.args); // mirror into the form, so the call can be edited and rerun by hand
-      const out = await runCall(call, stale, false);
+      form.set(call.tool, call.args, "Theo"); // mirror into the form, so the call can be edited and rerun by hand
+      const out = await runCall(call, stale, false, "Theo");
       turn.calls.push({ ...call, result: out.result });
       drawnNow.push(...out.feats);
       if (!out.ok) {
@@ -720,7 +827,8 @@ async function ask(e) {
 }
 
 // runs one call; returns {ok, result, feats} so a turn can be remembered and a plan can fit the map once at the end
-async function runCall(call, stale = () => false, fit = true) {
+let nextRun = 1;
+async function runCall(call, stale = () => false, fit = true, by = "") {
   let last = "";
   const ctx = {
     ...baseCtx,
@@ -738,7 +846,8 @@ async function runCall(call, stale = () => false, fit = true) {
   try {
     const feats = await execute(call, ctx);
     if (stale()) return { ok: false, result: "", feats: [] };
-    for (const f of feats) f.properties.fid = nextFid++;
+    const run = nextRun++;
+    for (const f of feats) Object.assign(f.properties, { fid: nextFid++, run, tool: call.tool, call: structuredClone(call), by, result: last });
     drawn.push(...feats);
     refresh();
     if (fit) fitTo(feats);
@@ -751,9 +860,10 @@ async function runCall(call, stale = () => false, fit = true) {
 }
 
 form.set("isochrone");
+syncMapTab();
 
 // the brain row in the tools overlay; a sign-in that just came back says so in the feed
-const picker = createBrainPicker($("brain"));
+const picker = createBrainPicker($("brain"), { onChange: (text) => ($("pfoot").textContent = text) });
 brain.finishSignIn().then((r) => {
   if (!r) return;
   newTurn();

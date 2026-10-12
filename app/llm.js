@@ -54,15 +54,18 @@ export function responsesBody(model, messages) {
     tools: [{ type: "namespace", name: "mbrt", description: "Map tools", tools: TOOLS.map((t) => ({ type: "function", name: t.name, description: t.description, parameters: t.input_schema })) }],
   };
 }
-// a server-sent event stream, read whole: the finished response carries every function call
+// a server-sent event stream, read whole. The finished response arrives with an empty output on this route,
+// so the function calls are taken from each finished output item.
 export function responsesCalls(sse) {
-  let final = null;
+  let completed = false;
+  const calls = [];
   for (const line of sse.split("\n")) {
     if (!line.startsWith("data:")) continue;
     const ev = (() => { try { return JSON.parse(line.slice(5)); } catch { return null; } })();
     if (ev?.type === "response.failed" || ev?.type === "error") throw modelError(ev.response?.error?.message ?? ev.message ?? "the response failed");
-    if (ev?.type === "response.completed") final = ev.response;
+    if (ev?.type === "response.output_item.done" && ev.item.type === "function_call") calls.push({ tool: ev.item.name, args: parseArgs(ev.item.arguments) });
+    if (ev?.type === "response.completed") completed = true;
   }
-  if (!final) throw modelError("the stream ended before the response completed");
-  return done(final.output.filter((o) => o.type === "function_call").map((o) => ({ tool: o.name, args: parseArgs(o.arguments) })));
+  if (!completed) throw modelError("the stream ended before the response completed");
+  return done(calls);
 }

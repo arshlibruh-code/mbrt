@@ -108,7 +108,8 @@ export const chatgptSignIn = () => (location.href = `/api/chatgpt/login?back=${e
 export const chatgptSignOut = () => fetch("/api/chatgpt/logout");
 export async function chatgptModels() {
   const body = await reply(await fetch("/api/chatgpt/models"), "ChatGPT");
-  return { list: body.models, pick: body.models.find((m) => /mini/.test(m.id))?.id ?? body.models[0]?.id };
+  // luna is the light tier: a map call needs no more, and it spends the least of the plan's allowance
+  return { list: body.models, pick: [/luna/, /mini/].map((re) => body.models.find((m) => re.test(m.id))).find(Boolean)?.id ?? body.models[0]?.id };
 }
 
 // who is answering, for the feed

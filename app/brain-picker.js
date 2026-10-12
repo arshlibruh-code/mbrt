@@ -1,18 +1,17 @@
-// The brain row at the foot of the tools overlay: which model answers, and whose account pays for it.
+// The BRAIN tab of the panel: which model answers, and whose account pays for it. onChange gets the label for the panel's footer.
 import * as brain from "./brain.js";
 
 const el = (tag, cls, html = "") => Object.assign(document.createElement(tag), { className: cls, innerHTML: html });
 const TABS = [["shared", "shared"], ["openrouter", "openrouter"], ["key", "your key"], ["chatgpt", "chatgpt"]];
 const price = (m) => (Number.isFinite(m.price) ? (m.price === 0 ? "  free" : `  $${(m.price * 1e6).toFixed(2)}/M`) : "");
 
-export function createBrainPicker(root) {
+export function createBrainPicker(root, { onChange }) {
   let open = brain.get().use;
-  root.innerHTML = `<button type="button" class="brain-head"><span>brain</span><b></b><i>▾</i></button><div class="brain-body"><div class="seg"></div><div class="brain-pane"></div></div>`;
-  const head = root.querySelector(".brain-head"), seg = root.querySelector(".seg"), pane = root.querySelector(".brain-pane");
-  head.addEventListener("click", () => root.classList.toggle("open"));
+  root.innerHTML = `<div class="seg"></div><div class="brain-pane"></div>`;
+  const seg = root.querySelector(".seg"), pane = root.querySelector(".brain-pane");
 
   const sync = () => {
-    head.querySelector("b").textContent = brain.label().replace(/^Theo$/, "Theo · shared");
+    onChange(brain.label().replace(/^Theo$/, "Theo · shared · gpt-oss-120b"));
     for (const b of seg.children) b.setAttribute("aria-pressed", b.dataset.value === open);
   };
   const use = (v) => (brain.set({ use: v }), sync());
@@ -117,5 +116,5 @@ export function createBrainPicker(root) {
   }
 
   render();
-  return { refresh: () => ((open = brain.get().use), render()), open: () => root.classList.add("open") };
+  return { refresh: () => ((open = brain.get().use), render()) };
 }
