@@ -2,12 +2,6 @@
 
 **MBRT** (Map Based Research Tool) is an interactive, chat-based mapping application that combines natural language processing with Mapbox GL JS to enable conversational map interactions. Built with agentic workflows using the ReAct pattern, the application interprets user queries and automatically visualizes geographic data on an interactive map.
 
-## Demo
-
-![MBRT Demo](public/MBRT-demo.gif)
-
-**[Download 60 FPS 4K MP4 Demo](public/MBRT-demo.mp4)**
-
 ## Features
 
 ### Natural Language Mapping
