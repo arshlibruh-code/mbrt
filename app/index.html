@@ -29,8 +29,6 @@
     #top { position: fixed; top: 12px; left: 12px; z-index: 3; display: flex; gap: 6px; align-items: stretch; }
     .mark { display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 7px; }
     .mark svg { display: block; }
-    #top button { font: 700 10px var(--font); text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); cursor: pointer; padding: 0 12px; }
-    #top button[aria-pressed="true"] { color: var(--cyan); }
 
     /* tools: an overlay on the map, opened from the top-left */
     #tools { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(360px, 92vw); max-height: 70vh; overflow-y: auto; z-index: 4; padding: 12px; }
@@ -39,7 +37,7 @@
     label { display: block; margin-bottom: 8px; }
     label > span { display: block; margin-bottom: 3px; }
     label i { color: var(--muted); font-style: normal; }
-    #tools input, #tools select, #tools textarea, #tools button, #top button { font: 13px/1.3 var(--font); color: var(--ink); background: var(--field); border: 1px solid var(--hair); }
+    #tools input, #tools select, #tools textarea, #tools button { font: 13px/1.3 var(--font); color: var(--ink); background: var(--field); border: 1px solid var(--hair); }
     #tools input, #tools select, #tools textarea { width: 100%; padding: 6px 7px; }
     select option { background: #15181c; }
     textarea { resize: vertical; }
@@ -51,7 +49,7 @@
 
     /* the feed, written onto the map above the bar: labels right of a center axis, text left of it */
     #feed { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + 10px); width: min(760px, 94vw); max-height: 42vh; overflow-y: auto;
-      z-index: 2; pointer-events: none; scrollbar-width: none; text-shadow: 0 1px 2px #000, 0 0 10px #000, 0 0 18px rgba(0, 0, 0, 0.8); }
+      z-index: 2; pointer-events: none; scrollbar-width: none; user-select: none; -webkit-user-select: none; text-shadow: 0 1px 2px #000, 0 0 10px #000, 0 0 18px rgba(0, 0, 0, 0.8); }
     body:not(.has-feed) #feed { display: none; }
     #log { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; row-gap: 3px; }
     #log li { display: contents; }
@@ -127,6 +125,8 @@
     #map .maplibregl-ctrl-group button:disabled .maplibregl-ctrl-icon { opacity: 0.3; }
     #map .maplibregl-ctrl-top-right { top: 2px; right: 2px; }
     body:not(.turned) #map .maplibregl-ctrl-compass { display: none; }
+    #map .maplibregl-ctrl-group .gear-btn { display: grid; place-items: center; color: var(--ink); }
+    #map .maplibregl-ctrl-group .gear-btn[aria-pressed="true"] { color: var(--cyan); }
     #map .maplibregl-ctrl-group .basemap-btn { font: 700 9px var(--font); letter-spacing: 0.08em; color: var(--ink); }
     #map .maplibregl-ctrl-bottom-left { bottom: calc(var(--bar-h) + 4px); }
     #map .maplibregl-ctrl.maplibregl-ctrl-scale { background: none; margin: 0 0 6px 12px; padding: 0 4px; border: 1px solid var(--ink2); border-top: 0;
@@ -143,7 +143,7 @@
 </head>
 <body>
   <div id="map"></div>
-  <header id="top"><span class="mark glass" aria-label="mbrt"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6" fill="none" stroke="#e9ebed" stroke-width="1.8"/><rect x="25.4" y="3" width="3.6" height="3.6" fill="#089BDF"/><path d="M9.5 23V11h13v12M16 11v12" fill="none" stroke="#e9ebed" stroke-width="3.4"/></svg><svg width="62" height="20" viewBox="0 0 62 20" aria-hidden="true"><text x="31" y="17" text-anchor="middle" font-family="Quantico" font-weight="700" font-size="19" fill="#0b0d10" stroke="#d9e2df" stroke-width="2.4" paint-order="stroke" letter-spacing=".6">MBRT</text><text x="31" y="17" text-anchor="middle" font-family="Quantico" font-weight="700" font-size="19" fill="none" stroke="#0b0d10" stroke-width=".8" letter-spacing=".6">MBRT</text></svg></span><button id="tools-toggle" class="glass" type="button" aria-pressed="false">tools</button></header>
+  <header id="top"><span class="mark glass" aria-label="mbrt"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6" fill="none" stroke="#e9ebed" stroke-width="1.8"/><rect x="25.4" y="3" width="3.6" height="3.6" fill="#089BDF"/><path d="M9.5 23V11h13v12M16 11v12" fill="none" stroke="#e9ebed" stroke-width="3.4"/></svg><svg height="17" viewBox="-24 -809 2993 918" aria-hidden="true"><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="#08080c" stroke="#d9e2df" stroke-width="109" paint-order="stroke" stroke-linejoin="miter"/><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="none" stroke="#08080c" stroke-width="38" stroke-linejoin="miter"/></svg></span></header>
   <section id="tools" class="glass">
     <form id="form" autocomplete="off">
       <label><span>tool</span><select id="tool"></select></label>

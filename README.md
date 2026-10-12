@@ -1,4 +1,4 @@
-<img src="app/public/mbrt-banner.png" alt="mbrt" width="600">
+<img src="app/public/mbrt-banner.svg" alt="mbrt" width="600">
 
 # mbrt
 

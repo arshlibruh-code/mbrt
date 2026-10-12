@@ -71,7 +71,6 @@ const setTools = (open) => {
   document.body.classList.toggle("tools-open", open);
   $("tools-toggle").setAttribute("aria-pressed", open);
 };
-$("tools-toggle").addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
 const syncFeed = () => document.body.classList.toggle("has-feed", $("log").children.length > 0);
 
 // ---- tab: title says what is happening; the logo's cyan pin blinks while thinking
@@ -90,6 +89,17 @@ function tabState(state, text = "") {
     pulse = setInterval(() => ($("favicon").href = (on = !on) ? ORB_BRIGHT : ORB_DIM), 600);
   } else document.title = text ? `${state === "error" ? "! " : ""}${text} · mbrt` : "mbrt · chat to a map";
 }
+// the gear opens the manual tools; it heads the control stack top-right
+map.addControl({
+  onAdd() {
+    const div = document.createElement("div");
+    div.className = "maplibregl-ctrl maplibregl-ctrl-group";
+    div.innerHTML = `<button type="button" id="tools-toggle" class="gear-btn" title="tools" aria-label="tools" aria-pressed="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
+    div.firstChild.addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
+    return div;
+  },
+  onRemove() {},
+}, "top-right");
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
 // one button that cycles the basemap; it shows the current one
