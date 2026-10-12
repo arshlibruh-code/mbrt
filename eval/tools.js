@@ -21,7 +21,7 @@ export const TOOLS = [
   tool("line", "Straight line segments joining places in order (as the crow flies, not a road route).",
     { places: trip }, ["places"]),
   tool("buffer", "Circle of a fixed radius around each center. radius_km has one value per center, or a single value for all. Convert miles and metres to km.",
-    { centers: places, radius_km: { type: "array", items: { type: "number" } } }, ["centers", "radius_km"]),
+    { centers: places, radius_km: { type: "array", items: { type: "number" } }, as_said: { type: "string", description: 'The radius as the user wrote it when not in km, e.g. "2 miles"' } }, ["centers", "radius_km"]),
   tool("isochrone", "Area reachable from a center within a travel time (unit minutes) or travel distance (unit km). One value per contour.",
     { center: place, profile, unit: { type: "string", enum: ["minutes", "km"] }, values: { type: "array", items: { type: "number" } } },
     ["center", "profile", "unit", "values"]),
@@ -42,7 +42,7 @@ export const TOOLS = [
     }, ["action"]),
   tool("plan", "The request needs two or more map actions (or the user says \"do it\" to several things you proposed). Write each step as a short standalone request that names its places and numbers, in the order to run them.",
     { steps: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 5 } }, ["steps"]),
-  tool("reply", "No map action fits: the request is missing something (clarify), asks for something this map cannot do (unsupported), or is small talk (chat). When you propose ideas, put up to 3 ready-to-run map requests in suggestions, each under 8 words with real places and numbers, like \"15 min walk from Cubbon Park\".",
+  tool("reply", "No map action fits: the request is missing something (clarify), asks for something this map cannot do (unsupported), or is small talk (chat). When you propose ideas, put up to 3 ready-to-run map requests in suggestions, each under 8 words, phrased the way a person would type it, with real places and numbers, like \"15 min walk from Cubbon Park\". Keep text short and plain; for several ideas, number them 1. 2. 3.",
     {
       kind: { type: "string", enum: ["clarify", "unsupported", "chat"] },
       text: { type: "string" },
@@ -57,7 +57,7 @@ When you reuse a place from an earlier turn, copy its name exactly, letter for l
 Keep place names as the user wrote them, adding the city or region when it is obvious, and never invent coordinates.
 "here" or "my location" means "@me"; "this point", "this line" or "the selected one" means "@selected".
 If the message is missing a place or number the tool needs, call reply with kind "clarify". Use "@me" or "@selected" only when the user's words point to them.
-Default profile is driving.`;
+Default profile is driving. Never use em dashes.`;
 
 // One shape for the app server and the eval, so the model always sees the same thing.
 // history: up to 3 earlier turns, each {user, calls: [{tool, args, result}]}; context: what the map shows now.

@@ -164,11 +164,13 @@ export async function execute(call, ctx) {
     case "buffer": {
       const pts = await geocodeAll(a.centers, ctx);
       if (a.radius_km.length !== 1 && a.radius_km.length !== pts.length) throw new Error("buffer: give one radius, or one per center");
-      ctx.result(pts.length === 1 ? `${a.radius_km[0]} km around ${pts[0].label}` : `${pts.length} buffers`);
+      // the radius in the user's own unit when they gave one ("2 miles (3.22 km)"), else km
+      const said = (r) => (a.as_said && a.radius_km.length === 1 ? `${a.as_said} (${r} km)` : `${r} km`);
+      ctx.result(pts.length === 1 ? `${said(a.radius_km[0])} around ${pts[0].label}` : `${pts.length} buffers`);
       return pts.flatMap((p, i) => {
         const r = a.radius_km.length === 1 ? a.radius_km[0] : a.radius_km[i];
         ctx.log("ok", "Turf", `${r} km buffer around ${p.label}`);
-        return [feature(turf.circle(p.coord, r, { steps: 96, units: "kilometers" }), "buffer", `${r} km`), feature(turf.point(p.coord), "marker", p.label)];
+        return [feature(turf.circle(p.coord, r, { steps: 96, units: "kilometers" }), "buffer", said(r)), feature(turf.point(p.coord), "marker", p.label)];
       });
     }
     case "isochrone": {
@@ -235,7 +237,7 @@ export async function execute(call, ctx) {
     case "map":
       return ctx.mapAction(a);
     case "reply":
-      ctx.result(a.text, a.kind === "chat" ? "ok" : "warn");
+      (ctx.reply ?? ctx.result)(a.text, a.kind);
       if (a.suggestions?.length) ctx.suggest(a.suggestions);
       return [];
   }

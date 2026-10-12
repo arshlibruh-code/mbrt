@@ -133,6 +133,11 @@ function turnText(t) {
       const steps = [...li.querySelectorAll(".trace li")];
       for (const s of [...steps.filter((s) => !s.matches(".json")), ...steps.filter((s) => s.matches(".json"))]) out.push(`  ${s.textContent}`);
     } else if (li.matches(".result")) out.push(`= ${text}`);
+    else if (li.matches(".reply")) {
+      const span = li.querySelector("span");
+      out.push(`= ${span.firstChild?.nodeType === 3 ? span.firstChild.textContent : ""}`);
+      [...span.querySelectorAll("ol li")].forEach((x, i) => out.push(`  ${i + 1}. ${x.textContent}`));
+    }
     else if (li.matches(".bad")) out.push(`! ${text}${raw ? ` (${raw})` : ""}`);
     else if (li.matches(".note")) out.push(`  ${text}`);
     else if (li.matches(".chips")) {
@@ -457,6 +462,25 @@ function result(text, status = "ok") {
   item(`result ${status}`, text);
   settleSoon();
 }
+// Theo's own words: a readable card, numbered ideas as a real list, long answers folded to a few lines
+function reply(text, kind) {
+  text = text.replace(/\s*[—–]\s*/g, ", ");
+  const li = item(`reply ${kind}`, "");
+  const span = li.firstChild;
+  const parts = text.split(/\s(?=\d{1,2}[.)]\s)/);
+  const [intro, ...items] = /^\d{1,2}[.)]\s/.test(parts[0]) ? ["", ...parts] : parts;
+  span.textContent = intro;
+  if (items.length >= 2) {
+    const ol = document.createElement("ol");
+    for (const it of items) ol.append(Object.assign(document.createElement("li"), { textContent: it.replace(/^\d{1,2}[.)]\s/, "") }));
+    span.append(ol);
+  }
+  if (text.length > 280) {
+    li.classList.add("long");
+    li.addEventListener("click", () => li.classList.toggle("open"));
+  }
+  settleSoon();
+}
 
 function theoLine() {
   const t = turnEl ?? newTurn();
@@ -549,7 +573,10 @@ function said({ tool, args: a }) {
       case "markers": return [`Pinning ${names(a.places)}…`, `Pinned ${names(a.places)}`];
       case "route": return [`${MODE[a.profile][0]} ${trip(a.waypoints)}…`, `${MODE[a.profile][1]} ${trip(a.waypoints)}`];
       case "line": return [`Measuring ${trip(a.places)}…`, `Measured ${trip(a.places)} as the crow flies`];
-      case "buffer": return [`Drawing ${a.radius_km.join(" / ")} km around ${names(a.centers)}…`, `Drew ${a.radius_km.join(" / ")} km around ${names(a.centers)}`];
+      case "buffer": {
+        const r = a.as_said && a.radius_km.length === 1 ? a.as_said : `${a.radius_km.join(" / ")} km`;
+        return [`Drawing ${r} around ${names(a.centers)}…`, `Drew ${r} around ${names(a.centers)}`];
+      }
       case "isochrone": {
         const what = `${a.values.join(" / ")} ${a.unit === "km" ? "km" : "min"} ${AROUND[a.profile]} from ${nice(a.center)}`;
         return [`Mapping a ${what}…`, `Mapped a ${what}`];
@@ -562,7 +589,7 @@ function said({ tool, args: a }) {
         center: ["Moving the map…", `Centered on ${a.lat}, ${a.lon}`], terrain: ["Turning the terrain…", "Toggled 3D terrain"],
         clear: ["Clearing…", `Cleared ${a.clear && a.clear !== "all" ? a.clear : "the map"}`], locate: ["Finding you…", "Found you"],
       }[a.action] ?? ["Changing the map…", "Changed the map"];
-      case "reply": return ["Answering…", { clarify: "Asked back", unsupported: "Can't do that one" }[a.kind] ?? "Replied"];
+      case "reply": return ["Answering…", ""]; // the answer itself says it; Theo's line keeps only the time
     }
   } catch {}
   return [`${tool}…`, tool];
@@ -953,7 +980,7 @@ async function ask(e) {
 // a picked call counts as done once it produces its result
 function landed() {
   const th = turnEl?.theo;
-  if (th?.pending) th.did.push(th.pending), (th.pending = "");
+  if (th && th.pending != null) th.did.push(th.pending), (th.pending = null); // a reply's "" counts too: its line shows only the time
 }
 
 // runs one call; returns {ok, result, feats} so a turn can be remembered and a plan can fit the map once at the end
@@ -965,6 +992,7 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     log: (...a) => stale() || log(...a),
     chart: (p) => stale() || chart(p),
     result: (text, status) => stale() || ((last = text), landed(), result(text, status)),
+    reply: (text, kind) => stale() || ((last = text), landed(), reply(text, kind)),
     suggest: (list) => stale() || suggest(list),
   };
   if (!validate[call.tool]?.(call.args)) {
