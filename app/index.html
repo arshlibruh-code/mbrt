@@ -6,7 +6,7 @@
   <title>mbrt</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Share+Tech+Mono&family=Quantico:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
       color-scheme: dark;
@@ -23,7 +23,6 @@
     h1 { margin: 0; font-size: 26px; font-variation-settings: "opsz" 120; font-weight: 700; letter-spacing: -0.01em; }
     .sub, label > span, #log b, dt { font-size: 10px; font-variation-settings: "opsz" 9; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink2); }
     .sub { display: block; margin: 2px 0 14px; }
-    .or { margin: 12px 0 8px; padding-top: 10px; border-top: 1px solid var(--hair); }
     #desc { color: var(--ink2); margin: 6px 0 10px; font-size: 13px; }
     label { display: block; margin-bottom: 8px; }
     label > span { display: block; margin-bottom: 3px; }
@@ -53,20 +52,42 @@
     #log b { display: block; }
     #log span { font-family: var(--mono); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
     .maplibregl-ctrl-attrib { font-size: 10px; }
+    /* the chat bar, carried over from the first mbrt: frosted, big, centered, an orb while thinking */
+    #chat { position: fixed; left: 330px; right: 0; bottom: 0; z-index: 2; padding: 6vh 1vh calc(6vh + env(safe-area-inset-bottom));
+      background: rgba(0, 0, 0, 0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.084); }
+    #chat .field { position: relative; }
+    #chat .field::before { content: ""; position: absolute; top: 50%; left: 50%; width: 120%; height: 150%; transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(8, 155, 223, 0.2) 0%, rgba(8, 155, 223, 0) 70%); border-radius: 50%; filter: blur(20px);
+      opacity: 0; pointer-events: none; z-index: -1; transition: opacity 0.3s; }
+    #chat .field.thinking::before { opacity: 1; animation: orbFloat 4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes orbFloat {
+      0% { transform: translate(-50%, -50%) translate(0, 0) scale(1); filter: blur(20px); }
+      20% { transform: translate(-50%, -50%) translate(2px, -3px) scale(1.05); filter: blur(22px); }
+      40% { transform: translate(-50%, -50%) translate(-3px, 2px) scale(0.95); filter: blur(18px); }
+      60% { transform: translate(-50%, -50%) translate(3px, 1px) scale(1.08); filter: blur(24px); }
+      80% { transform: translate(-50%, -50%) translate(-2px, -2px) scale(0.98); filter: blur(19px); }
+      100% { transform: translate(-50%, -50%) translate(0, 0) scale(1); filter: blur(20px); }
+    }
+    #msg { width: 100%; padding: 0; font: 700 30px "Quantico", monospace; letter-spacing: normal; text-transform: uppercase; text-align: center;
+      color: white; background: transparent; border: 0; outline: none; transition: color 0.3s; }
+    #msg::placeholder { color: rgba(255, 255, 255, 0.6); opacity: 0.5; }
+    #msg:focus::placeholder, #msg:not(:placeholder-shown)::placeholder { opacity: 0; }
+    #msg.thinking, #msg.thinking::placeholder { color: #089bdf7e; opacity: 1; }
+    #cancel-notice { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+      font: 400 10px "Quantico", monospace; text-transform: uppercase; color: rgba(255, 255, 255, 0.4); opacity: 0; transition: opacity 0.3s ease; }
+    #cancel-notice.visible { opacity: 1; }
     @media (max-width: 700px) {
-      #map { inset: 0 0 45vh 0; }
-      #panel { inset: auto 0 0 0; width: 100%; height: 45vh; border-right: 0; border-top: 1px solid var(--hair); padding: 12px 16px 16px; }
+      #map { inset: 0 0 40vh 0; }
+      #panel { inset: auto 0 0 0; width: 100%; height: 40vh; border-right: 0; border-top: 1px solid var(--hair); padding: 12px 16px 16px; }
+      #chat { left: 0; bottom: 40vh; padding: 3vh 16px; }
+      #msg { font-size: 20px; }
     }
   </style>
 </head>
 <body>
   <aside id="panel">
     <h1>mbrt</h1>
-    <span class="sub">chat to a map · gpt-oss-120b on Groq</span>
-    <form id="chat" autocomplete="off">
-      <label><span>ask</span><input id="msg" placeholder="30 min drive from Koramangala" maxlength="500"></label>
-    </form>
-    <span class="sub or">or pick a tool by hand</span>
+    <span class="sub">chat to a map · gpt-oss-120b on Groq · or pick a tool by hand</span>
     <form id="form" autocomplete="off">
       <label><span>tool</span><select id="tool"></select></label>
       <p id="desc"></p>
@@ -78,6 +99,12 @@
     <ol id="log"></ol>
   </aside>
   <div id="map"></div>
+  <form id="chat" autocomplete="off">
+    <div class="field">
+      <span id="cancel-notice">sending this will cancel the current request</span>
+      <input id="msg" placeholder="Ask the map anything" maxlength="500" aria-label="Ask the map">
+    </div>
+  </form>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

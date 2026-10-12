@@ -42,8 +42,10 @@ const map = new maplibregl.Map({
   style: STYLES.dark,
   center: [78.9, 22.5],
   zoom: 4,
-  attributionControl: { customAttribution: "Search: Photon by komoot · Routing: Valhalla by FOSSGIS · Boundaries: Nominatim" },
+  attributionControl: false,
 });
+// top-left, because the chat bar covers the bottom edge
+map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "Search: Photon by komoot · Routing: Valhalla by FOSSGIS · Boundaries: Nominatim" }), "top-left");
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
 // ---- drawn features: one GeoJSON source, styled by `kind`
@@ -135,7 +137,7 @@ async function mapAction(a) {
       return [];
     }
     case "locate":
-      return execute({ tool: "markers", args: { places: ["@me"] } }, ctx);
+      return execute({ tool: "markers", args: { places: ["@me"] } }, baseCtx);
   }
 }
 
@@ -176,7 +178,7 @@ function chart(profile) {
   $("chart").hidden = false;
 }
 
-const ctx = { log, chart, mapAction, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
+const baseCtx = { log, chart, mapAction, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
 
 // ---- the form is generated from the same tool schema the model will fill
 
@@ -247,31 +249,50 @@ function run(e) {
   runCall({ tool: t.name, args: readArgs(t) });
 }
 
-// the model only names the call; the server holds the Groq key (app/api/chat.js)
+// the model only names the call; the server holds the Groq key (app/api/chat.js).
+// A new message cancels the one in flight, and anything the old one still produces is dropped.
+let inflight = null;
+const thinking = (on) => {
+  $("msg").classList.toggle("thinking", on);
+  $("msg").closest(".field").classList.toggle("thinking", on);
+  $("msg").placeholder = on ? "Thinking..." : "Ask the map anything";
+  if (!on) $("cancel-notice").classList.remove("visible");
+};
+$("msg").addEventListener("input", () => $("cancel-notice").classList.toggle("visible", !!inflight && $("msg").value !== ""));
+
 async function ask(e) {
   e.preventDefault();
   const message = $("msg").value.trim();
   if (!message) return;
+  inflight?.abort();
+  const ctrl = (inflight = new AbortController());
+  const stale = () => ctrl !== inflight;
+  $("msg").value = "";
+  $("cancel-notice").classList.remove("visible");
+  thinking(true);
   resetOutput();
   log("ok", "you", message);
-  $("msg").disabled = true;
   try {
-    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message }) });
+    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message }), signal: ctrl.signal });
     const body = await res.json().catch(() => ({ error: `server ${res.status}` }));
+    if (stale()) return;
     if (!res.ok) throw new Error(body.error);
     log("ok", "Groq", `${body.model} chose ${body.call.tool} in ${body.ms} ms`);
     $("tool").value = body.call.tool; // mirror into the form, so the call can be edited and rerun by hand
     renderFields(body.call.args);
-    await runCall(body.call);
+    await runCall(body.call, stale);
   } catch (err) {
-    log("bad", "error", err.message);
+    if (!stale()) log("bad", "error", err.message);
   } finally {
-    $("msg").disabled = false;
-    $("msg").focus();
+    if (!stale()) {
+      inflight = null;
+      thinking(false);
+    }
   }
 }
 
-async function runCall(call) {
+async function runCall(call, stale = () => false) {
+  const ctx = { ...baseCtx, log: (...a) => stale() || log(...a), chart: (p) => stale() || chart(p) };
   $("call").textContent = JSON.stringify(call);
   if (!validate[call.tool]?.(call.args)) {
     log("bad", "schema", validate[call.tool] ? ajv.errorsText(validate[call.tool].errors, { dataVar: "args" }) : `unknown tool ${call.tool}`);
@@ -281,13 +302,14 @@ async function runCall(call) {
   const t0 = performance.now();
   try {
     const feats = await execute(call, ctx);
+    if (stale()) return;
     for (const f of feats) f.properties.fid = nextFid++;
     drawn.push(...feats);
     refresh();
     if (feats.length) {
       const [w, s, e2, n] = bbox({ type: "FeatureCollection", features: feats });
       if (w === e2 && s === n) map.flyTo({ center: [w, s], zoom: Math.max(map.getZoom(), 12) });
-      else map.fitBounds([w, s, e2, n], { padding: 60, maxZoom: 14 });
+      else map.fitBounds([w, s, e2, n], { padding: { top: 60, left: 60, right: 60, bottom: $("chat").offsetHeight + 40 }, maxZoom: 14 });
     }
     log("ok", "done", `${feats.length} features in ${Math.round(performance.now() - t0)} ms`);
   } catch (err) {
