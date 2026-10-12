@@ -7,7 +7,7 @@
 const COMMON = `#version 300 es
 precision highp float;
 uniform vec2 u_res;
-uniform float u_time, u_flow, u_think, u_done, u_err, u_type, u_focus, u_caret;
+uniform float u_time, u_flow, u_think, u_done, u_err, u_type, u_focus, u_caret, u_ring, u_collapse;
 uniform vec3 u_keys[16]; // x in 0..1 across the bar, unused, time of the key
 out vec4 o;
 const vec3 CYAN = vec3(0.031, 0.608, 0.875);
@@ -31,8 +31,10 @@ void main() {
   float fade = edgeFade(uv);
 
   // contours: terrain height, with mass where keys were pressed
-  vec2 pc = p;
-  pc.x += u_err * 0.035 * sin(pc.y * 70.0 + u_time * 45.0); // shear on error
+  // error: a fault through the center; the two sides slip past each other, then heal
+  float seamX = (noise(vec2(p.y * 9.0, 4.0)) - 0.5) * 0.03;
+  float side = sign(p.x - seamX);
+  vec2 pc = p + vec2(0.0, side * u_err * 0.07);
   float h = fbm(pc * 1.5 + vec2(u_flow * 0.05, u_flow * 0.02));
   for (int i = 0; i < 16; i++) {
     float age = u_time - u_keys[i].z;
@@ -40,14 +42,18 @@ void main() {
     vec2 dc = pc - keyPos(u_keys[i]);
     h += 0.45 * exp(-dot(dc, dc) * 16.0) * exp(-age * 0.8);
   }
-  float iso = (length(pc * vec2(1.0, 1.7)) + (h - 0.5) * 0.4) * 5.0 - u_flow * 0.9;
-  float f = mix(h * 8.0, iso, u_think);
+  // rings grow while thinking; on a failure they fall back into the center and fade
+  float iso = (length(pc * vec2(1.0, 1.7)) + (h - 0.5) * 0.4) * 5.0 - u_ring;
+  float ringW = max(u_think, u_collapse);
+  float f = mix(h * 8.0, iso, ringW);
   float line = 1.0 - min(abs(fract(f - 0.5) - 0.5) / fwidth(f), 1.0);
   float major = 1.0 - min(abs(fract(f / 5.0 - 0.5) - 0.5) / fwidth(f / 5.0), 1.0);
-  float front = u_think * exp(-pow(fract(iso) - 0.98, 2.0) * 400.0);
+  float front = ringW * exp(-pow(fract(iso) - 0.98, 2.0) * 400.0);
+  float seam = u_err * exp(-abs(p.x - seamX) * u_res.y / 1.5) * smoothstep(0.5, 0.1, abs(p.y));
   float text = 1.0 - 0.45 * exp(-p.y * p.y * 50.0) * exp(-p.x * p.x * 1.4); // calmer behind the words
-  float aLine = ((line * 0.55 + major * 0.45) * (0.06 + 0.05 * u_focus + 0.26 * u_think + 0.34 * u_done + 0.15 * u_err) + front * 0.3) * text * fade;
-  vec3 lineCol = mix(mix(vec3(0.92, 0.94, 0.96), CYAN, clamp(u_think * 0.9 + u_done * 0.5, 0.0, 1.0)), RED, u_err);
+  float aLine = ((line * 0.55 + major * 0.45) * (0.06 + 0.05 * u_focus + 0.26 * u_think + 0.16 * u_collapse + 0.34 * u_done + 0.06 * u_err) + front * 0.3 * (1.0 - u_err * 0.5)) * text * fade + seam * 0.45;
+  // status colour lives in the rim only; the contours stay neutral on error
+  vec3 lineCol = mix(vec3(0.92, 0.94, 0.96), CYAN, clamp(max(u_think, u_collapse * 0.6) * 0.9 + u_done * 0.5, 0.0, 1.0) * (1.0 - u_err * 0.7));
 
   // glass: a fresnel-like rim on the top edge, light spilling a little into the slab
   float dTop = u_res.y - gl_FragCoord.y;
@@ -62,7 +68,9 @@ void main() {
   }
   rim += u_think * bead * (exp(-dTop / 2.2) * 1.4 + exp(-dTop / 34.0) * 0.22);
   rim += u_done * (exp(-dTop / 4.0) * 0.9 + exp(-dTop / 40.0) * 0.12);
-  rim *= 1.0 - u_err * 0.75 * step(0.55, hash(vec2(floor(u_time * 22.0), 3.0))); // flicker on error
+  // error: the rim's light drains from both ends toward the center and holds there as a slow red ember
+  float ember = exp(-pow((uv.x - 0.5) * aspect(), 2.0) * 0.35);
+  rim *= mix(1.0, ember * (0.85 + 0.15 * sin(u_time * 3.0)) * 1.5, u_err);
   float aRim = clamp(rim, 0.0, 1.0) * (0.75 + 0.25 * fade);
   vec3 rimCol = mix(mix(vec3(0.95, 0.97, 1.0), CYAN, clamp(u_think * bead * 0.8 + u_done * 0.4, 0.0, 1.0)), RED, u_err);
 
@@ -112,8 +120,9 @@ export function createBarFx(canvas, host) {
 
   // ---- state: targets, eased values, keystrokes
 
-  const target = { think: 0, done: 0, err: 0, focus: 0 };
-  const val = { think: 0, done: 0, err: 0, focus: 0, type: 0 };
+  const target = { think: 0, done: 0, err: 0, focus: 0, collapse: 0 };
+  const val = { think: 0, done: 0, err: 0, focus: 0, type: 0, collapse: 0 };
+  let ring = 0; // isochrone ring phase: grows while thinking, runs backwards when a request fails
   const keys = new Float32Array(16 * 3);
   let keyIdx = 0, caret = 0.5, flow = 0, last = performance.now(), t0 = last, timer = 0, raf = 0;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -141,6 +150,8 @@ export function createBarFx(canvas, host) {
     ease("done", 6);
     ease("err", 7);
     ease("focus", 4);
+    ease("collapse", 3);
+    ring += dt * (0.9 * val.think - 3.2 * val.collapse);
     val.type *= Math.exp(-dt * 2.2);
     flow += dt * (1 - 0.85 * val.done); // terrain flow slows as a result lands
 
@@ -155,6 +166,8 @@ export function createBarFx(canvas, host) {
     gl.uniform1f(u.u_type, val.type);
     gl.uniform1f(u.u_focus, val.focus);
     gl.uniform1f(u.u_caret, caret);
+    gl.uniform1f(u.u_ring, ring);
+    gl.uniform1f(u.u_collapse, val.collapse);
     gl.uniform3fv(u.u_keys, keys);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -183,6 +196,7 @@ export function createBarFx(canvas, host) {
       target.think = s === "thinking" ? 1 : 0;
       target.done = s === "done" ? 1 : 0;
       target.err = s === "error" ? 1 : 0;
+      target.collapse = s === "error" && val.think > 0.3 ? 1 : 0; // only a failure mid-thought has rings to pull back
       if (s === "typing") target.focus = 1;
       if (s === "done" || s === "error") back = setTimeout(() => api.state("idle"), s === "done" ? 1600 : 2200);
       wake();

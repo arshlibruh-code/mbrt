@@ -438,6 +438,7 @@ function run(e) {
   fx.state("thinking");
   runCall(call).then((out) => {
     fx.state(out.ok ? "done" : "error");
+    if (!out.ok) shake();
     if (out.ok) remember({ user: `(by hand) ${describe(call)}`, calls: [{ ...call, result: out.result }] });
   });
 }
@@ -508,6 +509,14 @@ function fitTo(feats) {
 // A new message cancels the one in flight, and anything the old one still produces is dropped.
 let inflight = null;
 // ---- the bar's shader layer: contours in a glass slab, following the chat state
+
+// one damped side-to-side shake of the bar's text on a failure, like a refused password
+function shake() {
+  const el = $("msg");
+  el.classList.remove("shake");
+  void el.offsetWidth; // restart the animation
+  el.classList.add("shake");
+}
 
 const fx = createBarFx($("fx"), $("chat"));
 const measure = document.createElement("canvas").getContext("2d");
@@ -592,6 +601,7 @@ async function ask(e) {
       thinking(false);
       tabState(failed ? "error" : "done", message);
       fx.state(failed ? "error" : "done");
+      if (failed) shake();
     }
   }
 }
