@@ -23,8 +23,14 @@ const STYLES = {
         tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
         attribution: "Imagery © Esri, Maxar, Earthstar Geographics",
       },
+      // borders and place names drawn over the imagery
+      labels: {
+        type: "raster",
+        tileSize: 256,
+        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"],
+      },
     },
-    layers: [{ id: "sat", type: "raster", source: "sat" }],
+    layers: [{ id: "sat", type: "raster", source: "sat" }, { id: "sat-labels", type: "raster", source: "labels" }],
   },
 };
 const DEM = {
@@ -73,6 +79,32 @@ function tabState(state, text = "") {
   } else document.title = text ? `${state === "error" ? "! " : ""}${text} · mbrt` : "mbrt · chat to a map";
 }
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+
+// one button that cycles the basemap; it shows the current one
+const BASEMAPS = ["satellite", "dark", "street"], SHORT = { satellite: "SAT", dark: "DARK", street: "MAP" };
+let basemap = "satellite";
+function setBasemap(name) {
+  basemap = name;
+  map.setStyle(STYLES[name], { diff: false });
+  const b = document.querySelector(".basemap-btn");
+  if (b) (b.textContent = SHORT[name]), (b.title = `basemap: ${name}, click for ${BASEMAPS[(BASEMAPS.indexOf(name) + 1) % 3]}`);
+}
+map.addControl({
+  onAdd() {
+    const div = document.createElement("div");
+    div.className = "maplibregl-ctrl maplibregl-ctrl-group";
+    div.innerHTML = `<button type="button" class="basemap-btn" title="basemap: satellite, click for dark">SAT</button>`;
+    div.firstChild.addEventListener("click", () => setBasemap(BASEMAPS[(BASEMAPS.indexOf(basemap) + 1) % 3]));
+    return div;
+  },
+  onRemove() {},
+}, "top-right");
+map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 110 }), "bottom-left");
+
+// the compass only matters once the map is turned or tilted
+const syncCompass = () => document.body.classList.toggle("turned", Math.abs(map.getBearing()) > 0.5 || map.getPitch() > 0.5);
+map.on("rotate", syncCompass);
+map.on("pitch", syncCompass);
 
 // ---- drawn features: one GeoJSON source, styled by `kind`
 
@@ -137,7 +169,7 @@ async function mapAction(a) {
   switch (a.action) {
     case "style":
       if (!a.style) throw new Error("map style: pick street, satellite or dark");
-      map.setStyle(STYLES[a.style], { diff: false });
+      setBasemap(a.style);
       result(`${a.style} map`);
       return [];
     case "zoom":
