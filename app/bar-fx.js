@@ -1,8 +1,8 @@
 // Shader layer behind the chat bar: contours in a glass slab, driven by one state machine.
 // States: idle, typing, thinking, done, error. Each drives a uniform that eases toward its target,
-// so every change is a physical blend, never a cut. It draws every frame only while something moves,
-// drops to ~5 fps when idle (MapLibre shares the GPU), stops when the tab is hidden, and shows a
-// still frame under prefers-reduced-motion.
+// so every change is a physical blend, never a cut. It draws only while something moves and holds the
+// last frame at rest (MapLibre shares the GPU), stops when the tab is hidden, and shows a still frame
+// under prefers-reduced-motion.
 
 const COMMON = `#version 300 es
 precision highp float;
@@ -187,8 +187,7 @@ export function createBarFx(canvas, host) {
     clearTimeout(timer);
     if (document.hidden || reduced) return;
     const busy = target.think > 0 || target.done > 0 || target.err > 0 || target.waitOn > 0 || !settled() || recentKeys(t);
-    if (busy) raf = requestAnimationFrame(frame);
-    else timer = setTimeout(() => (raf = requestAnimationFrame(frame)), 200); // idle drift at ~5 fps
+    if (busy) raf = requestAnimationFrame(frame); // at rest the last frame simply stays: no idle loop, no stutter
   }
   function wake() {
     clearTimeout(timer);
