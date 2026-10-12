@@ -109,7 +109,7 @@ function newTurn() {
   sec.className = "turn";
   sec.innerHTML = `<ol class="lines"></ol>`;
   $("log").append(sec);
-  [...$("log").children].slice(0, -3).forEach((t) => t.remove());
+  [...$("log").children].slice(0, -3).forEach((t) => (archive.push(turnText(t)), t.remove())); // gone from view, kept for "copy"
   [...$("log").children].reverse().forEach((t, i) => {
     t.dataset.age = i;
     if (i) t.classList.add("settled");
@@ -119,6 +119,52 @@ function newTurn() {
   return sec;
 }
 const linesEl = () => (turnEl ?? newTurn()).querySelector(".lines");
+
+// ---- copy the whole conversation as plain text, steps included: every turn since the page opened
+const archive = [];
+function turnText(t) {
+  const out = [];
+  for (const li of t.querySelectorAll(":scope > .lines > li")) {
+    const text = li.querySelector("span")?.textContent ?? "";
+    const raw = li.querySelector(":scope > small")?.textContent;
+    if (li.matches(".head")) out.push(`> ${text}`);
+    else if (li.matches(".theo")) {
+      out.push(`◆ ${text}${li.querySelector("em").textContent ? ` · ${li.querySelector("em").textContent}` : ""}`);
+      const steps = [...li.querySelectorAll(".trace li")];
+      for (const s of [...steps.filter((s) => !s.matches(".json")), ...steps.filter((s) => s.matches(".json"))]) out.push(`  ${s.textContent}`);
+    } else if (li.matches(".result")) out.push(`= ${text}`);
+    else if (li.matches(".bad")) out.push(`! ${text}${raw ? ` (${raw})` : ""}`);
+    else if (li.matches(".note")) out.push(`  ${text}`);
+    else if (li.matches(".chips")) {
+      const offered = [...li.querySelectorAll("button:not(.copy-all)")].map((b) => b.textContent);
+      if (offered.length) out.push(`  options: ${offered.join(" | ")}`);
+    }
+  }
+  const chart = t.querySelector(".chart dl");
+  if (chart) out.push(`  ${[...chart.querySelectorAll("dt")].map((dt) => `${dt.textContent} ${dt.nextElementSibling.textContent}`).join(" · ")}`);
+  return out.join("\n");
+}
+const COPY = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="9" height="9"/><path d="M11 5V2H2v9h3"/></svg>`;
+// a chip after the latest turn; only one at a time
+function copyChip() {
+  const old = document.querySelector("#log .copy-all");
+  if (old) old.parentElement.children.length === 1 ? old.parentElement.remove() : old.remove();
+  if (!turnEl) return;
+  const row = turnEl.querySelector(".lines > .chips:last-child") ?? chips([]);
+  const b = Object.assign(document.createElement("button"), { type: "button", className: "copy-all", innerHTML: `${COPY}copy conversation` });
+  b.addEventListener("click", async () => {
+    const turns = [...archive, ...[...$("log").children].map(turnText)];
+    const text = `mbrt conversation · ${new Date().toLocaleString("en-IN")} · ${brain.short().slice(0, 2).join(" · ")}\n\n${turns.join("\n\n")}\n`;
+    try {
+      await navigator.clipboard.writeText(text);
+      b.innerHTML = `${COPY}copied ${turns.length} turn${turns.length === 1 ? "" : "s"}`;
+    } catch {
+      b.innerHTML = `${COPY}couldn't copy`;
+    }
+    setTimeout(() => (b.innerHTML = `${COPY}copy conversation`), 1800);
+  });
+  row.append(b);
+}
 
 // ---- tab: title says what is happening; the logo's cyan pin blinks while thinking
 
@@ -446,6 +492,7 @@ function theoDone(ok, word) {
   const text = word ?? (ok ? done : th.doing ? `Stopped ${lower(th.doing)}` : "Stopped");
   th.li.querySelector("span").textContent = `${th.hand ? "By hand · " : ""}${text}`;
   th.li.querySelector("em").textContent = `${((performance.now() - th.t0) / 1000).toFixed(1)} s`;
+  copyChip();
 }
 // ready-to-run prompts the model offered; a tap runs one
 function suggest(list) {
@@ -575,6 +622,7 @@ const form = createToolsForm($("form"), { lookup, describe, pickOnMap, onGhosts 
 const clearFeed = () => {
   clearTimeout(settleTimer);
   $("log").replaceChildren();
+  archive.length = 0;
   turnEl = null;
   syncFeed();
 };
