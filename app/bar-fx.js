@@ -1,4 +1,4 @@
-// Shader layer behind the chat bar: contours over ink, driven by one state machine.
+// Shader layer behind the chat bar: contours in a glass slab, driven by one state machine.
 // States: idle, typing, thinking, done, error. Each drives a uniform that eases toward its target,
 // so every change is a physical blend, never a cut. It draws every frame only while something moves,
 // drops to ~5 fps when idle (MapLibre shares the GPU), stops when the tab is hidden, and shows a
@@ -23,22 +23,12 @@ vec2 keyPos(vec3 k) { return vec2((k.x - 0.5) * aspect(), 0.0); }
 float edgeFade(vec2 uv) { return smoothstep(0.0, 0.12, uv.x) * smoothstep(1.0, 0.88, uv.x); }
 `;
 
-// contour lines over ink: the terrain isolines carry the meaning (thinking grows an isochrone),
-// the smoke underneath carries the feel (puffs from keystrokes, a vortex while thinking)
+// contour lines inside a glass slab: the terrain isolines carry the meaning (thinking grows an isochrone),
+// the rim light along the top edge carries the state (it brightens at the caret, a bead runs along it while thinking)
 const FRAG = `
 void main() {
   vec2 uv = gl_FragCoord.xy / u_res, p = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
   float fade = edgeFade(uv);
-
-  // ink: domain-warped smoke, pulled into a vortex around the center while thinking
-  vec2 ps = p;
-  ps.y *= 1.0 + u_done * 1.5; // settles flat when a result lands
-  float r = length(ps);
-  float ang = u_think * 0.9 / (r + 0.18) * u_time * 0.35;
-  vec2 c = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * ps;
-  vec2 q = c * 1.9 + vec2(0.0, -u_flow * 0.14);
-  vec2 w = vec2(fbm(q + vec2(1.7, 9.2) + u_flow * 0.05), fbm(q + vec2(8.3, 2.8) - u_flow * 0.04));
-  float smoke = smoothstep(0.42, 0.86, fbm(q + w * 1.7 * (1.0 + u_err * 2.5))) * mix(smoothstep(1.05, 0.1, uv.y), 1.0, u_think);
 
   // contours: terrain height, with mass where keys were pressed
   vec2 pc = p;
@@ -47,33 +37,38 @@ void main() {
   for (int i = 0; i < 16; i++) {
     float age = u_time - u_keys[i].z;
     if (u_keys[i].z <= 0.0 || age < 0.0 || age > 5.0) continue;
-    vec2 kp = keyPos(u_keys[i]);
-    vec2 dc = pc - kp;
+    vec2 dc = pc - keyPos(u_keys[i]);
     h += 0.45 * exp(-dot(dc, dc) * 16.0) * exp(-age * 0.8);
-    vec2 pos = kp + vec2(0.0, -0.3 + age * 0.13);
-    float s = 0.05 + age * 0.06;
-    vec2 dd = p - pos;
-    smoke += 0.9 * exp(-dot(dd, dd) / (s * s)) * exp(-age * 0.75) * (0.55 + 0.45 * fbm(p * 9.0 + age));
   }
-  float iso = (length(pc * vec2(1.0, 1.7)) + (h - 0.5) * 0.4 + (w.x - 0.5) * 0.12 * u_think) * 5.0 - u_flow * 0.9;
+  float iso = (length(pc * vec2(1.0, 1.7)) + (h - 0.5) * 0.4) * 5.0 - u_flow * 0.9;
   float f = mix(h * 8.0, iso, u_think);
   float line = 1.0 - min(abs(fract(f - 0.5) - 0.5) / fwidth(f), 1.0);
   float major = 1.0 - min(abs(fract(f / 5.0 - 0.5) - 0.5) / fwidth(f / 5.0), 1.0);
   float front = u_think * exp(-pow(fract(iso) - 0.98, 2.0) * 400.0);
+  float text = 1.0 - 0.45 * exp(-p.y * p.y * 50.0) * exp(-p.x * p.x * 1.4); // calmer behind the words
+  float aLine = ((line * 0.55 + major * 0.45) * (0.06 + 0.05 * u_focus + 0.26 * u_think + 0.34 * u_done + 0.15 * u_err) + front * 0.3) * text * fade;
+  vec3 lineCol = mix(mix(vec3(0.92, 0.94, 0.96), CYAN, clamp(u_think * 0.9 + u_done * 0.5, 0.0, 1.0)), RED, u_err);
 
-  // keep the band behind the text calmer so the words stay readable
-  float text = 1.0 - 0.6 * exp(-p.y * p.y * 50.0) * exp(-p.x * p.x * 1.4);
-  float core = u_think * exp(-r * r * 16.0) * (0.75 + 0.25 * sin(u_time * 2.2));
-  float aInk = clamp(smoke * (0.12 + 0.16 * u_focus + 0.28 * u_think) * (1.0 - u_done * 0.6) * text + core * 0.35, 0.0, 1.0);
-  float aLine = (line * 0.55 + major * 0.45) * (0.13 + 0.1 * u_focus + 0.45 * u_think + 0.6 * u_done + 0.25 * u_err) + front * 0.5;
+  // glass: a fresnel-like rim on the top edge, light spilling a little into the slab
+  float dTop = u_res.y - gl_FragCoord.y;
+  float rim = exp(-dTop / 1.4) * 0.55 + exp(-dTop / 16.0) * 0.08 + exp(-gl_FragCoord.y / 24.0) * 0.04;
+  float cx = (uv.x - u_caret) * aspect();
+  rim += u_type * exp(-cx * cx * 30.0) * (exp(-dTop / 2.5) * 1.3 + exp(-dTop / 26.0) * 0.18);
+  float bead = 0.0;
+  for (int i = 0; i < 10; i++) {
+    float bx = 0.5 + 0.46 * sin((u_time - float(i) * 0.035) * 1.25);
+    float dx = (uv.x - bx) * aspect();
+    bead += exp(-float(i) * 0.42) * exp(-dx * dx * 140.0);
+  }
+  rim += u_think * bead * (exp(-dTop / 2.2) * 1.4 + exp(-dTop / 34.0) * 0.22);
+  rim += u_done * (exp(-dTop / 4.0) * 0.9 + exp(-dTop / 40.0) * 0.12);
+  rim *= 1.0 - u_err * 0.75 * step(0.55, hash(vec2(floor(u_time * 22.0), 3.0))); // flicker on error
+  float aRim = clamp(rim, 0.0, 1.0) * (0.75 + 0.25 * fade);
+  vec3 rimCol = mix(mix(vec3(0.95, 0.97, 1.0), CYAN, clamp(u_think * bead * 0.8 + u_done * 0.4, 0.0, 1.0)), RED, u_err);
 
-  vec3 inkCol = mix(vec3(0.86, 0.9, 0.95), CYAN, clamp(u_think * 0.5 + core * 1.5, 0.0, 1.0));
-  vec3 lineCol = mix(vec3(0.92, 0.94, 0.96), CYAN, clamp(u_think * 0.9 + u_done * 0.5, 0.0, 1.0));
-  inkCol = mix(inkCol, RED, u_err);
-  lineCol = mix(lineCol, RED, u_err);
-  // lines over smoke, premultiplied
-  vec4 ink = vec4(inkCol * aInk, aInk), ln = vec4(lineCol * aLine, aLine);
-  o = (ln + ink * (1.0 - ln.a)) * fade;
+  // rim over lines, premultiplied
+  vec4 ln = vec4(lineCol * aLine, aLine), rm = vec4(rimCol * aRim, aRim);
+  o = rm + ln * (1.0 - rm.a);
 }`;
 
 const VERT = `#version 300 es

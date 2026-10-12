@@ -507,7 +507,7 @@ function fitTo(feats) {
 // the model only names the call; the server holds the Groq key (app/api/chat.js).
 // A new message cancels the one in flight, and anything the old one still produces is dropped.
 let inflight = null;
-// ---- the bar's shader layer: contours over ink, following the chat state
+// ---- the bar's shader layer: contours in a glass slab, following the chat state
 
 const fx = createBarFx($("fx"), $("chat"));
 const measure = document.createElement("canvas").getContext("2d");
