@@ -22,7 +22,7 @@ const STYLES = {
         tileSize: 256,
         tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
         maxzoom: 18, // past this many places have no imagery; stretching the last real tile beats placeholder tiles
-        attribution: "Imagery © Esri, Maxar, Earthstar Geographics",
+        attribution: "© Esri, Vantor, Earthstar Geographics",
       },
       // borders and place names drawn over the imagery
       labels: {
@@ -44,14 +44,14 @@ const STYLES = {
         tileSize: 256,
         maxzoom: 15,
         tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg"],
-        attribution: "EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024)",
+        attribution: '<a href="https://cloudless.eox.at" target="_blank" rel="noopener">EOxCloudless</a> by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024)',
       },
       overlay: {
         type: "raster",
         tileSize: 256,
         maxzoom: 14,
         tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/overlay_bright_3857/default/g/{z}/{y}/{x}.png"],
-        attribution: "Labels: © OpenStreetMap contributors, rendering © EOX",
+        attribution: "labels © EOX",
       },
     },
     layers: [{ id: "s2", type: "raster", source: "s2" }, { id: "s2-labels", type: "raster", source: "overlay" }],
@@ -81,7 +81,7 @@ const map = new maplibregl.Map({
   attributionControl: false,
 });
 // credits as one line of small text above the bar; the basemap's own credit is added by MapLibre per style
-map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: "© OpenStreetMap · Photon · OSRM, Valhalla (FOSSGIS) · Nominatim" }), "bottom-right");
+map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · Photon · FOSSGIS · Nominatim' }), "bottom-right");
 new ResizeObserver(() => {
   document.documentElement.style.setProperty("--bar-h", `${$("chat").offsetHeight}px`);
   map.setPadding({ top: 0, left: 0, right: 0, bottom: $("chat").offsetHeight }); // center the globe in the space above the bar

@@ -106,7 +106,8 @@
 
     /* credits: one line of small text above the bar */
     #map .maplibregl-ctrl-bottom-right { bottom: calc(var(--bar-h) + 4px); }
-    #map .maplibregl-ctrl.maplibregl-ctrl-attrib { background: none; margin: 0 10px 6px; padding: 0; font: 8px/1.4 var(--font); color: rgba(233, 235, 237, 0.4); text-shadow: 0 0 3px #000; }
+    #map .maplibregl-ctrl.maplibregl-ctrl-attrib { background: none; margin: 0 10px 6px; padding: 0; font: 8px/1.4 var(--font); color: rgba(233, 235, 237, 0.4); text-shadow: 0 0 3px #000;
+      max-width: min(360px, 70vw); text-align: right; }
     #map .maplibregl-ctrl-attrib a { color: inherit; }
     #map .maplibregl-ctrl-attrib-button { display: none; }
     /* zoom and compass in the same glass as everything else */
