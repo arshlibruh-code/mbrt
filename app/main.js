@@ -74,10 +74,11 @@ const setTools = (open) => {
 $("tools-toggle").addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
 const syncFeed = () => document.body.classList.toggle("has-feed", $("log").children.length > 0);
 
-// ---- tab: title says what is happening, the orb favicon brightens while thinking
+// ---- tab: title says what is happening; the logo's cyan pin blinks while thinking
 
-const orb = (core, glow) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><radialGradient id="g"><stop offset="0" stop-color="${core}"/><stop offset=".5" stop-color="#089bdf" stop-opacity="${glow}"/><stop offset="1" stop-color="#089bdf" stop-opacity="0"/></radialGradient></defs><rect width="32" height="32" fill="#0b0d10"/><circle cx="16" cy="16" r="15" fill="url(#g)"/></svg>`)}`;
-const ORB_DIM = orb("#4fb8ea", 0.55), ORB_BRIGHT = orb("#c9ecff", 0.95);
+// the mbrt mark: a block m in reticle brackets, the cyan square is the pin
+const logo = (pin) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#0b0d10"/><path d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6" fill="none" stroke="#e9ebed" stroke-width="1.8"/><rect x="25.4" y="3" width="3.6" height="3.6" fill="${pin}"/><path d="M9.5 23V11h13v12M16 11v12" fill="none" stroke="#e9ebed" stroke-width="3.4"/></svg>`)}`;
+const ORB_DIM = logo("#089BDF"), ORB_BRIGHT = logo("#0b0d10");
 $("favicon").href = ORB_DIM;
 let pulse = null;
 function tabState(state, text = "") {

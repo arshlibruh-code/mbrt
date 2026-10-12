@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>mbrt · chat to a map</title>
   <link id="favicon" rel="icon" type="image/svg+xml" href="">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Chat to a map. Type a place, a route or a drive time and watch it drawn.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quantico:wght@400;700&display=swap" rel="stylesheet">
@@ -25,7 +27,8 @@
 
     /* top-left wordmark and the tools toggle */
     #top { position: fixed; top: 12px; left: 12px; z-index: 3; display: flex; gap: 6px; align-items: stretch; }
-    .mark { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.04em; padding: 5px 10px; }
+    .mark { display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 7px; }
+    .mark svg { display: block; }
     #top button { font: 700 10px var(--font); text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); cursor: pointer; padding: 0 12px; }
     #top button[aria-pressed="true"] { color: var(--cyan); }
 
@@ -140,7 +143,7 @@
 </head>
 <body>
   <div id="map"></div>
-  <header id="top"><span class="mark glass">mbrt</span><button id="tools-toggle" class="glass" type="button" aria-pressed="false">tools</button></header>
+  <header id="top"><span class="mark glass" aria-label="mbrt"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6" fill="none" stroke="#e9ebed" stroke-width="1.8"/><rect x="25.4" y="3" width="3.6" height="3.6" fill="#089BDF"/><path d="M9.5 23V11h13v12M16 11v12" fill="none" stroke="#e9ebed" stroke-width="3.4"/></svg><svg width="62" height="20" viewBox="0 0 62 20" aria-hidden="true"><text x="31" y="17" text-anchor="middle" font-family="Quantico" font-weight="700" font-size="19" fill="#0b0d10" stroke="#d9e2df" stroke-width="2.4" paint-order="stroke" letter-spacing=".6">MBRT</text><text x="31" y="17" text-anchor="middle" font-family="Quantico" font-weight="700" font-size="19" fill="none" stroke="#0b0d10" stroke-width=".8" letter-spacing=".6">MBRT</text></svg></span><button id="tools-toggle" class="glass" type="button" aria-pressed="false">tools</button></header>
   <section id="tools" class="glass">
     <form id="form" autocomplete="off">
       <label><span>tool</span><select id="tool"></select></label>
