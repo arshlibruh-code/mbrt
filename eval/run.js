@@ -4,6 +4,8 @@
 //   node run.js --model claude-haiku-5-5    Anthropic (ANTHROPIC_API_KEY)
 //   node run.js --model groq:openai/gpt-oss-120b --runs 1 --concurrency 1   Groq free (GROQ_API_KEY)
 //   node run.js --model codex --runs 1      ChatGPT plan through the logged-in Codex CLI, no key
+//   node run.js --model zen:gpt-5.4-nano    OpenCode Zen API with your OpenCode login (paid models only: bills your balance)
+//   node run.js --model opencode:big-pickle OpenCode's free models, through the opencode CLI (prompt mode, no native tool calls)
 // golden rows may carry "alt": other answers that also count as right
 // Flags: --runs N  --effort low|medium|high  --only g08,g17  --concurrency N
 
@@ -73,20 +75,29 @@ async function anthropicAdapter() {
   };
 }
 
-// Groq speaks the OpenAI chat format. Free tier is ~30 RPM and 8K TPM, so 429s are expected: wait and retry.
-async function groqAdapter(model) {
-  const key = process.env.GROQ_API_KEY;
-  if (!key) throw new Error("GROQ_API_KEY is not set");
+// OpenAI chat format: Groq (free tier ~30 RPM and 8K TPM, so 429s are expected: wait and retry) and OpenCode Zen
+// (the key OpenCode saved at login, read from its own file, so it never sits in the repo or the shell)
+function groqAdapter(model) {
+  if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY is not set");
+  return openaiAdapter("https://api.groq.com/openai/v1/chat/completions", process.env.GROQ_API_KEY, model, 30000);
+}
+function zenAdapter(model) {
+  const auth = path.join(os.homedir(), ".local/share/opencode/auth.json");
+  const key = JSON.parse(fs.readFileSync(auth, "utf8")).opencode?.key;
+  if (!key) throw new Error(`no OpenCode key in ${auth}, run: opencode auth login`);
+  return openaiAdapter("https://opencode.ai/zen/v1/chat/completions", key, model, 90000);
+}
+async function openaiAdapter(url, key, model, timeout) {
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
   return async (prompt, history) => {
     for (let attempt = 0; ; attempt++) {
       const t0 = Date.now();
       let res;
       try {
-        res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        res = await fetch(url, {
           method: "POST",
           headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(timeout),
           body: JSON.stringify({
             model,
             temperature: 0,
@@ -105,7 +116,7 @@ async function groqAdapter(model) {
         continue;
       }
       const ms = Date.now() - t0; // model time only, rate-limit waits excluded
-      const body = await res.json();
+      const body = await res.json().catch(() => ({ error: { message: "not JSON" } }));
       if (!res.ok) return { call: null, inTok: 0, outTok: 0, ms, raw: `error: ${res.status} ${body.error?.message ?? ""}` };
       const msg = body.choices[0].message, calls = msg.tool_calls ?? [], fn = calls[0]?.function;
       let args = null, raw = fn ? "" : `no tool call: ${msg.content ?? ""}`;
@@ -164,8 +175,35 @@ async function codexAdapter(model) {
   });
 }
 
+// OpenCode's free models only answer inside OpenCode, so they run through `opencode run` like Codex above: the tool
+// schema goes in the prompt and the answer is one JSON object. Its read-only plan agent, in an empty folder.
+async function opencodeAdapter(model) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mbrt-opencode-"));
+  const spec = TOOLS.map((t) => ({ name: t.name, description: t.description, parameters: t.input_schema }));
+  return (prompt, history) => new Promise((resolve) => {
+    const t0 = Date.now();
+    const text = `${SYSTEM}\nDo not use any of your own tools and do not read files. Answer with one JSON object and nothing else: {"tool": <name>, "args": {...}}, args matching that tool's parameters.\nTools: ${JSON.stringify(spec)}\n\n${withHistory(prompt, history)}`;
+    execFile("opencode", ["run", "--pure", "--agent", "plan", "-m", `opencode/${model}`, "--format", "json", text], { cwd: dir, timeout: 180000, maxBuffer: 1 << 24 }, (err, stdout, stderr) => {
+      const events = stdout.split("\n").flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+      const said = events.filter((e) => e.type === "text").map((e) => e.part.text).join("");
+      const tokens = events.find((e) => e.type === "step_finish")?.part.tokens ?? {};
+      let call = null, raw = "";
+      try {
+        call = JSON.parse(said.slice(said.indexOf("{"), said.lastIndexOf("}") + 1));
+        if (typeof call?.tool !== "string") throw new Error("no tool");
+      } catch {
+        call = null;
+        raw = `no JSON call: ${said.slice(0, 200) || err?.message || String(stderr).slice(-200)}`;
+      }
+      resolve({ call, inTok: tokens.input ?? 0, outTok: tokens.output ?? 0, ms: Date.now() - t0, raw });
+    }).stdin.end();
+  });
+}
+
 function pickAdapter() {
   if (MODEL.startsWith("groq:")) return groqAdapter(MODEL.slice(5));
+  if (MODEL.startsWith("zen:")) return zenAdapter(MODEL.slice(4));
+  if (MODEL.startsWith("opencode:")) return opencodeAdapter(MODEL.slice(9));
   if (MODEL === "codex" || MODEL.startsWith("codex:")) return codexAdapter(MODEL.slice(6) || null);
   if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set");
   return anthropicAdapter();
