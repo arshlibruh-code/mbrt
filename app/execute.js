@@ -125,11 +125,15 @@ export async function execute(call, ctx) {
     }
     case "line": {
       const pts = await geocodeAll(a.places, ctx);
-      const line = turf.lineString(pts.map((p) => p.coord));
-      const km = turf.length(line);
-      ctx.log("ok", "Turf", `straight line ${km.toFixed(1)} km`);
+      const km = turf.length(turf.lineString(pts.map((p) => p.coord)));
+      // great-circle arcs: the true shortest path, which curves on the globe
+      const arcs = pts.slice(1).flatMap((p, i) => {
+        const g = turf.greatCircle(pts[i].coord, p.coord, { npoints: 96 }).geometry;
+        return g.type === "LineString" ? [g.coordinates] : g.coordinates;
+      });
+      ctx.log("ok", "Turf", `great-circle line ${km.toFixed(1)} km`);
       ctx.result(`${km1(km)} km as the crow flies`);
-      return [feature(line, "line", `${km.toFixed(1)} km`), ...pts.map((p, i) => feature(turf.point(p.coord), "marker", `${i + 1}. ${p.label}`))];
+      return [feature(turf.multiLineString(arcs), "line", `${km1(km)} km`), ...pts.map((p, i) => feature(turf.point(p.coord), "marker", `${i + 1}. ${p.label}`))];
     }
     case "buffer": {
       const pts = await geocodeAll(a.centers, ctx);
@@ -171,8 +175,8 @@ export async function execute(call, ctx) {
       let line;
       if (a.waypoints.length === 1 && a.waypoints[0] === "@selected") {
         const f = ctx.selected();
-        if (f?.geometry.type !== "LineString") throw new Error("@selected: select a route or line first");
-        line = f;
+        if (!/LineString/.test(f?.geometry.type ?? "")) throw new Error("@selected: select a route or line first");
+        line = f.geometry.type === "LineString" ? f : turf.lineString(f.geometry.coordinates.flat());
       } else {
         if (a.waypoints.length < 2) throw new Error("elevation: needs two places or a selected line");
         line = (await routeLine(a.waypoints, a.profile, ctx)).line;

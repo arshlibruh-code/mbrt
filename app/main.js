@@ -57,6 +57,12 @@ const STYLES = {
     layers: [{ id: "s2", type: "raster", source: "s2" }, { id: "s2-labels", type: "raster", source: "overlay" }],
   },
 };
+// atmosphere, from the portfolio globe: a halo that fades out as you zoom in
+const SKY = {
+  "sky-color": "#88C6FC", "sky-horizon-blend": 0.8, "horizon-color": "#ffffff", "horizon-fog-blend": 0.8,
+  "fog-color": "#88C6FC", "fog-ground-blend": 0.5, "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 1, 1, 12, 0],
+};
+const SKY_DARK = { ...SKY, "sky-color": "#0d1b2a", "horizon-color": "#3a5068", "fog-color": "#0d1b2a" };
 const DEM = {
   type: "raster-dem",
   tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
@@ -70,13 +76,16 @@ const $ = (id) => document.getElementById(id);
 const map = new maplibregl.Map({
   container: "map",
   style: STYLES.satellite,
-  center: [78.9, 22.5],
-  zoom: 4,
+  center: [78.9, 20],
+  zoom: 2.2,
   attributionControl: false,
 });
 // credits as one line of small text above the bar; the basemap's own credit is added by MapLibre per style
 map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: "© OpenStreetMap · Photon · OSRM, Valhalla (FOSSGIS) · Nominatim" }), "bottom-right");
-new ResizeObserver(() => document.documentElement.style.setProperty("--bar-h", `${$("chat").offsetHeight}px`)).observe($("chat"));
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty("--bar-h", `${$("chat").offsetHeight}px`);
+  map.setPadding({ top: 0, left: 0, right: 0, bottom: $("chat").offsetHeight }); // center the globe in the space above the bar
+}).observe($("chat"));
 
 // ---- tools overlay
 
@@ -126,6 +135,36 @@ map.addControl({
 }, "top-right");
 map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 110 }), "bottom-left");
 
+// ---- idle spin: on load and after 20 s untouched the globe turns east; any touch or typing stops it.
+// Speed is in degrees per second (same on any refresh rate) and eases in; it only turns the zoomed-out globe.
+const SPIN_DEG_S = 3, IDLE_MS = 20000;
+let spinning = false, spinSpeed = 0, lastFrame = 0, idleTimer = 0;
+function spinFrame(t) {
+  if (!spinning) return;
+  const dt = lastFrame ? Math.min((t - lastFrame) / 1000, 0.1) : 0;
+  lastFrame = t;
+  spinSpeed += (SPIN_DEG_S - spinSpeed) * Math.min(1, dt * 0.8);
+  if (map.getZoom() < 5 && !map.isMoving()) {
+    const c = map.getCenter();
+    map.setCenter([c.lng + spinSpeed * dt, c.lat]);
+  }
+  requestAnimationFrame(spinFrame);
+}
+function startSpin() {
+  if (spinning) return;
+  spinning = true;
+  spinSpeed = 0;
+  lastFrame = 0;
+  requestAnimationFrame(spinFrame);
+}
+function stopSpin() {
+  spinning = false;
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(startSpin, IDLE_MS);
+}
+for (const ev of ["mousedown", "touchstart", "wheel", "dragstart"]) map.on(ev, stopSpin);
+map.once("load", startSpin);
+
 // the compass only matters once the map is turned or tilted
 const syncCompass = () => document.body.classList.toggle("turned", Math.abs(map.getBearing()) > 0.5 || map.getPitch() > 0.5);
 map.on("rotate", syncCompass);
@@ -138,6 +177,8 @@ const AREAS = ["buffer", "isochrone", "polygon", "boundary"];
 const LINES = ["route", "line"];
 
 function addLayers() {
+  map.setProjection({ type: "globe" }); // a sphere when zoomed out; MapLibre flattens it as you zoom in
+  map.setSky(basemap === "dark" ? SKY_DARK : SKY);
   map.addSource("drawn", { type: "geojson", data: { type: "FeatureCollection", features: drawn } });
   const isKind = (kinds) => ["in", ["get", "kind"], ["literal", kinds]];
   const sel = ["==", ["get", "fid"], ["literal", selectedFid]];
@@ -397,6 +438,7 @@ const thinking = (on) => {
   if (!on) $("cancel-notice").classList.remove("visible");
 };
 $("msg").addEventListener("input", () => $("cancel-notice").classList.toggle("visible", !!inflight && $("msg").value !== ""));
+$("msg").addEventListener("focus", stopSpin);
 
 async function ask(e) {
   e.preventDefault();
@@ -439,6 +481,7 @@ async function runCall(call, stale = () => false) {
     return false;
   }
   $("run").disabled = true;
+  stopSpin();
   try {
     const feats = await execute(call, ctx);
     if (stale()) return false;
@@ -447,8 +490,9 @@ async function runCall(call, stale = () => false) {
     refresh();
     if (feats.length) {
       const [w, s, e2, n] = bbox({ type: "FeatureCollection", features: feats });
-      if (w === e2 && s === n) map.flyTo({ center: [w, s], zoom: Math.max(map.getZoom(), 12) });
-      else map.fitBounds([w, s, e2, n], { padding: { top: 60, left: 60, right: 60, bottom: $("chat").offsetHeight + 40 }, maxZoom: 14 });
+      const flight = { curve: 1.6, speed: 1.1, maxDuration: 6000 }; // a far jump pulls out to the globe and arcs across
+      if (w === e2 && s === n) map.flyTo({ center: [w, s], zoom: Math.max(map.getZoom(), 12), ...flight });
+      else map.fitBounds([w, s, e2, n], { padding: 60, maxZoom: 14, ...flight });
     }
     return true;
   } catch (err) {
