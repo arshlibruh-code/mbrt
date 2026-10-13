@@ -27,8 +27,14 @@
 
     /* top-left wordmark and the tools toggle */
     #top { position: fixed; top: 12px; left: 12px; z-index: 3; display: flex; gap: 6px; align-items: stretch; }
-    .mark { display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 7px; }
+    .mark { display: flex; align-items: center; padding: 4px 10px; }
     .mark svg { display: block; }
+    /* the word draws itself in letter by letter on load; while Theo thinks, a cyan trace runs around it */
+    .mark .edge { stroke-dasharray: 1; stroke-dashoffset: 1; animation: mark-draw 1.6s cubic-bezier(0.6, 0, 0.2, 1) 0.2s forwards; }
+    body.thinking .mark .edge { stroke: var(--cyan); stroke-dasharray: 0.07 0.03; stroke-dashoffset: 0; animation: mark-trace 1.4s linear infinite; }
+    @keyframes mark-draw { to { stroke-dashoffset: 0; } }
+    @keyframes mark-trace { to { stroke-dashoffset: -0.1; } }
+    @media (prefers-reduced-motion: reduce) { .mark .edge, body.thinking .mark .edge { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; } }
 
     /* the panel: a sheet docked left (the map slides right to stay in view), a bottom sheet on phones */
     #tools { position: fixed; top: 54px; left: 12px; max-height: calc(100vh - 54px - var(--bar-h) - 12px); width: 340px; z-index: 4; display: flex; flex-direction: column;
@@ -291,7 +297,7 @@
 </head>
 <body>
   <div id="map"></div>
-  <header id="top"><span class="mark glass" aria-label="mbrt"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6" fill="none" stroke="#e9ebed" stroke-width="1.8"/><rect x="25.4" y="3" width="3.6" height="3.6" fill="#089BDF"/><path d="M9.5 23V11h13v12M16 11v12" fill="none" stroke="#e9ebed" stroke-width="3.4"/></svg><svg height="17" viewBox="-24 -809 2993 918" aria-hidden="true"><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="#08080c" stroke="#d9e2df" stroke-width="109" paint-order="stroke" stroke-linejoin="miter"/><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="none" stroke="#08080c" stroke-width="38" stroke-linejoin="miter"/></svg></span></header>
+  <header id="top"><span class="mark glass" aria-label="mbrt"><svg height="17" viewBox="-24 -809 2993 918" aria-hidden="true"><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="#08080c" stroke="#d9e2df" stroke-width="109" paint-order="stroke" stroke-linejoin="miter" class="edge" pathLength="1"/><path d="M674 0V-462H672L514 0H381L222 -468H220V0H85V-700H271L447 -185H449L624 -700H809V0ZM1505 -413 1418 -363V-361L1505 -311V-67L1389 0H1010V-700H1389L1505 -633ZM1150 -302V-120H1365V-302ZM1150 -580V-422H1365V-580ZM2237 0H2083L1933 -264H1846V0H1706V-700H2085L2201 -633V-331L2085 -264ZM1846 -580V-384H2061V-580ZM2671 -580V0H2531V-580H2342V-700H2860V-580Z" fill="none" stroke="#08080c" stroke-width="38" stroke-linejoin="miter"/></svg></span></header>
   <aside id="tools" class="glass" data-tab="tool">
     <nav class="ptabs"><button type="button" data-tab="tool">tool</button><button type="button" data-tab="layers">layers <i id="layer-count"></i></button><button type="button" data-tab="brain">brain</button><button type="button" data-tab="map">map</button><button type="button" id="tools-close" title="close (esc)" aria-label="close panel">×</button></nav>
     <div class="ppane" data-pane="tool">

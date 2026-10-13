@@ -972,6 +972,7 @@ const thinking = (on) => {
   if (on) hints.pause();
   else hints.resume();
   if (on) tabState("thinking"), fx.state("thinking");
+  document.body.classList.toggle("thinking", on);
   $("msg").classList.toggle("thinking", on);
   $("msg").closest(".field").classList.toggle("thinking", on);
   if (on) $("msg").placeholder = "Theo is thinking...";
