@@ -84,6 +84,7 @@ MapLibre, OpenFreeMap, Photon, OSRM and Valhalla (FOSSGIS), Nominatim, Overpass,
 - Pick a direction in the style lab (`app/lab.html`: reticle, surveyor, phosphor) and port its tokens into the map.
 - Colour roles on the map and in LAYERS (cyan for the latest result, white for older ones), from the lab.
 - Isochrone fills with shader work: 4 distinct options on one page to compare.
-- "inside" in the TOOL tab (chat only for now). Overpass's public servers are often busy; places and green cover fail when all of them are.
+- "inside" in the TOOL tab (chat only for now).
+- Re-run Groq on all 74 rows once its free daily limit resets (it shares the key with the shared brain, so run it when nobody is using the app). Overpass's public servers are often busy; places and green cover fail when all of them are.
 
 Map data © OpenStreetMap contributors.
