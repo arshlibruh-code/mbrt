@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mbrt / isochrone looks</title>
+  <link rel="icon" href="/mbrt-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quantico:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: dark; --ground: #0b0e12; --ink: #E9EBED; --ink2: rgba(233, 235, 237, 0.62); --muted: rgba(233, 235, 237, 0.38); --hair: rgba(255, 255, 255, 0.084); --cyan: #089bdf; }
+    * { box-sizing: border-box; border-radius: 0; }
+    html, body { margin: 0; height: 100%; background: var(--ground); color: var(--ink); font: 11px/1.4 "Quantico", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+    body { display: flex; flex-direction: column; }
+    header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--hair); }
+    header img { width: 26px; height: 26px; }
+    header b { letter-spacing: 0.13em; font-size: 13px; }
+    header .facts { color: var(--ink2); letter-spacing: 0.06em; }
+    header .spacer { flex: 1; }
+    #clock { color: var(--cyan); min-width: 11ch; letter-spacing: 0.06em; }
+    button { font: inherit; background: transparent; color: var(--ink); border: 1px solid var(--hair); padding: 5px 9px; cursor: pointer; letter-spacing: 0.08em; }
+    button:hover { border-color: var(--cyan); }
+    main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 1px; background: var(--hair); min-height: 0; }
+    .panel { position: relative; background: var(--ground); min-height: 0; }
+    .panel .map { position: absolute; inset: 0; }
+    .tag { position: absolute; top: 10px; left: 10px; z-index: 2; pointer-events: none; max-width: min(340px, calc(100% - 20px)); background: rgba(10, 12, 15, 0.72); border: 1px solid var(--hair); padding: 7px 9px; }
+    .tag b { letter-spacing: 0.12em; }
+    .tag b i { font-style: normal; color: var(--cyan); margin-right: 6px; }
+    .tag p { margin: 3px 0 0; color: var(--ink2); }
+    .panel .maplibregl-ctrl.maplibregl-ctrl-attrib { font-size: 9px; background: rgba(10, 12, 15, 0.72); color: var(--muted); }
+    .panel .maplibregl-ctrl-attrib a { color: var(--ink2); }
+    .maplibregl-ctrl-attrib-button { filter: invert(1); opacity: 0.5; }
+    @media (max-width: 760px) {
+      main { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: 72vh; overflow-y: auto; }
+      header .facts { width: 100%; order: 3; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="/mbrt-mark.svg" alt="mbrt">
+    <b>ISOCHRONE / FOUR LOOKS</b>
+    <span class="facts" id="facts">loading the frozen drive</span>
+    <span class="spacer"></span>
+    <span id="clock">T+ 0.0 MIN</span>
+    <button id="pause" title="space">PAUSE</button>
+    <button id="replay" title="r">REPLAY</button>
+  </header>
+  <main id="panels"></main>
+  <script type="module" src="/iso/iso.js"></script>
+</body>
+</html>
