@@ -1,22 +1,16 @@
 // How results look, beyond the plain style in main.js. A new area arrives with a ping that runs out from its
 // center; an isochrone rests as a gradient of its contours; places, lengths and areas carry their names and
 // numbers as small chips in the app's own type, which step aside when they collide or slip behind the chat. On a tap,
-// an isochrone lifts into terrain (height is time left) or fills with traffic (cars on real Valhalla drives at
-// road speed). One clock drives all of it, from the iso.html comparison page.
+// an isochrone lifts into terrain (height is time left). The looks come from the iso.html comparison page.
 import { featureCollection, difference, area as turfArea, bbox, lineString, lineIntersect, polygonToLine, distance, pointOnFeature, centroid, along, length as lineLength, booleanPointInPolygon } from "@turf/turf";
 import { Marker } from "maplibre-gl";
-import { valhalla } from "./execute.js";
 
 const AREAS = ["buffer", "isochrone", "polygon", "boundary"];
-const COSTING = { driving: "auto", walking: "pedestrian", cycling: "bicycle" };
 const RAMP = (v) => ["interpolate", ["linear"], v, 0, "#F1F2F3", 0.35, "#7fd3ff", 1, "#089bdf"];
 const clamp01 = (x) => ["min", 1, ["max", 0, x]];
 const easeOut = (p) => ["-", 1, ["^", ["-", 1, p], 3]];
 const FRAC = ["coalesce", ["get", "frac"], 1]; // where a contour sits between the center (0) and the edge (1)
 const ISO = ["==", ["get", "kind"], "isochrone"];
-const SPEED = 5; // traffic: drive minutes per real second
-const EMIT = 1; // traffic: a car leaves each route every this many minutes
-const ROUTES = 10; // traffic: drives fetched, about one a second from the free server
 
 // the resting look of every area; during a ping, the arriving run shows each contour as the front passes it
 export function fillPaint(ping) {
@@ -39,25 +33,11 @@ export function edgePaint(ping) {
   };
 }
 
-// Valhalla's encoded polyline, 6 decimals
-function decode(str) {
-  const out = [];
-  let i = 0, lat = 0, lon = 0;
-  const next = () => {
-    let r = 0, shift = 0, b;
-    do { b = str.charCodeAt(i++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-    return r & 1 ? ~(r >> 1) : r >> 1;
-  };
-  while (i < str.length) { lat += next(); lon += next(); out.push([lon / 1e6, lat / 1e6]); }
-  return out;
-}
-
 const contours = (feats) => feats.filter((f) => f.properties.kind === "isochrone").sort((a, b) => a.properties.frac - b.properties.frac);
 const centerOf = (feats) => feats.find((f) => f.properties.kind === "marker")?.geometry.coordinates;
-const outerRing = (f) => (f.geometry.type === "Polygon" ? f.geometry.coordinates[0] : f.geometry.coordinates.reduce((a, b) => (b[0].length > a[0].length ? b : a))[0]);
 
 export function createLooks(map) {
-  let ping = null, lift = null, traffic = null, ticks = featureCollection([]), raf = 0;
+  let ping = null, lift = null, ticks = featureCollection([]), raf = 0;
   const spots = new Map(); // fid -> where its chip sits, worked out once
   const chips = new Map(); // key -> { marker, el, prio, run }
 
@@ -66,12 +46,7 @@ export function createLooks(map) {
     map.addLayer({ id: "mark-tick", type: "circle", source: "ticks", paint: { "circle-radius": 2.5, "circle-color": "#F1F2F3", "circle-stroke-color": "#121518", "circle-stroke-width": 1 } }, "points");
     map.addSource("lift", { type: "geojson", data: lift?.data ?? featureCollection([]) });
     map.addLayer({ id: "lift", type: "fill-extrusion", source: "lift", paint: { "fill-extrusion-color": RAMP(["get", "from"]), "fill-extrusion-opacity": 0.92, "fill-extrusion-height": ["get", "h"] } }, "points");
-    map.addSource("roads", { type: "geojson", data: featureCollection([]) });
-    map.addLayer({ id: "roads", type: "line", source: "roads", paint: { "line-color": "#7fd3ff", "line-opacity": 0.18, "line-width": 1 } }, "points");
-    map.addSource("cars", { type: "geojson", data: featureCollection([]) });
-    map.addLayer({ id: "cars", type: "circle", source: "cars", paint: { "circle-radius": 2.4, "circle-color": RAMP(["get", "e"]), "circle-opacity": ["get", "a"], "circle-blur": 0.3 } }, "points");
-    if (traffic) map.getSource("roads").setData(featureCollection(traffic.routes.map((r) => lineString(r.coords))));
-    if (ping || lift || traffic) wake();
+    if (ping || lift) wake();
   }
 
   // where a feature's chip goes. Isochrones and buffers: where a ray due west of the center leaves the edge, so
@@ -109,7 +84,6 @@ export function createLooks(map) {
   function sync(visible) {
     const runs = new Set(visible.map((f) => f.properties.run));
     if (lift && !runs.has(lift.run)) setLift(null);
-    if (traffic && !runs.has(traffic.run)) setTraffic(null);
     const keep = new Set(), tickPts = [];
     for (const f of visible) {
       const s = spot(f, visible);
@@ -192,53 +166,6 @@ export function createLooks(map) {
     wake();
   }
 
-  // traffic: drives from the start to points around the edge, fetched one by one; cars flow as each arrives
-  async function setTraffic(run, feats, call, btn) {
-    if (traffic?.btn) traffic.btn.textContent = "traffic";
-    if (run == null || traffic?.run === run) {
-      traffic = null;
-      map.getSource("roads")?.setData(featureCollection([]));
-      map.getSource("cars")?.setData(featureCollection([]));
-      return;
-    }
-    const me = (traffic = { run, routes: [], t0: performance.now(), btn });
-    wake();
-    const center = centerOf(feats), edge = lineString(outerRing(contours(feats).at(-1))), len = lineLength(edge);
-    for (let i = 0; i < ROUTES && traffic === me; i++) {
-      if (btn) btn.textContent = `traffic ${i}/${ROUTES}`;
-      const to = along(edge, (len * i) / ROUTES).geometry.coordinates;
-      try {
-        const r = await valhalla("route", { locations: [{ lon: center[0], lat: center[1] }, { lon: to[0], lat: to[1] }], costing: COSTING[call.args.profile] ?? "auto" });
-        const coords = decode(r.trip.legs[0].shape), t = new Array(coords.length).fill(0);
-        // Valhalla times each maneuver; inside one, time is spread by distance
-        for (const m of r.trip.legs[0].maneuvers) {
-          const a = m.begin_shape_index, b = m.end_shape_index, d = [0];
-          for (let k = a + 1; k <= b; k++) d.push(d.at(-1) + distance(coords[k - 1], coords[k]));
-          for (let k = a + 1; k <= b; k++) t[k] = t[a] + (m.time / 60) * (d.at(-1) ? d[k - a] / d.at(-1) : 1);
-        }
-        if (traffic !== me) return;
-        me.routes.push({ coords, t, born: (performance.now() - me.t0) / 1000 * SPEED });
-        map.getSource("roads")?.setData(featureCollection(me.routes.map((x) => lineString(x.coords))));
-      } catch {} // a drive the server refused is just one fewer stream
-    }
-    if (traffic === me && btn) btn.textContent = "stop traffic";
-  }
-  function cars(now) {
-    const out = [], t = ((now - traffic.t0) / 1000) * SPEED;
-    traffic.routes.forEach((r, i) => {
-      const T = r.t.at(-1), off = r.born + ((i * 7) % 10) / 10 * EMIT;
-      for (let k = Math.max(0, Math.floor((t - T - off) / EMIT)); k <= Math.floor((t - off) / EMIT); k++) {
-        const e = t - off - k * EMIT;
-        if (e < 0 || e > T) continue;
-        let lo = 0, hi = r.t.length - 1; // last vertex at or before e
-        while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (r.t[mid] <= e) lo = mid; else hi = mid; }
-        const span = r.t[hi] - r.t[lo], f = span ? (e - r.t[lo]) / span : 0, [a, b] = [r.coords[lo], r.coords[hi]];
-        out.push({ type: "Feature", geometry: { type: "Point", coordinates: [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f] }, properties: { e: e / T, a: Math.min(1, (T - e) / 1.5) * 0.95 } });
-      }
-    });
-    return featureCollection(out);
-  }
-
   const wake = () => (raf ||= requestAnimationFrame(tick));
   function tick(now) {
     raf = 0;
@@ -253,9 +180,8 @@ export function createLooks(map) {
       map.getLayer("lift") && map.setPaintProperty("lift", "fill-extrusion-height", ["*", ["get", "h"], easeOut(clamp01(["/", ["-", g, ["get", "from"]], 0.35]))]);
       if (g < 1.35) more = true;
     }
-    if (traffic) map.getSource("cars")?.setData(cars(now)), (more = true);
     if (more) wake();
   }
 
-  return { layers, sync, arrive, lift: setLift, traffic: setTraffic };
+  return { layers, sync, arrive, lift: setLift };
 }

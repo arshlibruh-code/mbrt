@@ -16,7 +16,7 @@ A new area pings out from its center when the camera lands, then rests with its 
 | route | road route through waypoints, with distance and time |
 | line | straight lines between places |
 | buffer | radius around each center |
-| isochrone | area reachable in N minutes or km, drawn as four bands; chips lift it into 3D or fill it with traffic |
+| isochrone | area reachable in N minutes or km, drawn as four bands; a chip lifts it into 3D |
 | polygon | area between places |
 | elevation_profile | height chart along a route or a selected line |
 | boundary | official outline of a state, district or city |

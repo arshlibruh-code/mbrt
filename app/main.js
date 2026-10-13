@@ -312,7 +312,7 @@ function addLayers() {
   looks.layers();
   if (terrainOn) setTerrain(true);
 }
-// the ping, gradient, numbers on the map, 3D and traffic (looks.js)
+// the ping, gradient, numbers on the map and 3D (looks.js)
 const looks = createLooks(map);
 // a look that breaks costs only the look: the result still draws and counts, and the trace says what happened
 const safely = (what, fn) => { try { fn(); } catch (err) { console.error(what, err); log("warn", what, "could not draw this part", `${err.name}: ${err.message}`); } };
@@ -1151,7 +1151,7 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     refresh();
     if (fit) fitTo(feats);
     if (call.tool === "isochrone")
-      chips([["3D", (e) => looks.lift(run, feats, e.currentTarget)], ["traffic", (e) => looks.traffic(run, feats, call, e.currentTarget)]]);
+      chips([["3D", (e) => looks.lift(run, feats, e.currentTarget)]]);
     return { ok: true, result: last, feats };
   } catch (err) {
     return { ok: false, result: `failed: ${err.message}`, feats: [], err };
