@@ -66,7 +66,10 @@ When you reuse a place from an earlier turn, copy its name exactly, letter for l
 Keep place names as the user wrote them, adding the city or region when it is obvious, and never invent coordinates.
 "here" or "my location" means "@me"; "this point", "this line" or "the selected one" means "@selected".
 If the message is missing a place or number the tool needs, call reply with kind "clarify". Use "@me" or "@selected" only when the user's words point to them.
-Default profile is driving. Never use em dashes.`;
+Default profile is driving. When clarifying, base suggestions on the selected feature, latest result, or place in view. Never offer unrelated landmarks. Preserve the original action and its numbers in each suggestion. If none of that context exists, ask without invented examples.
+"@picked" refers to a point the user explicitly tapped on the map; preserve that token exactly.
+Never supply a flood level or earthquake year unless the user supplied it; ask for the missing value.
+Never use em dashes.`;
 
 // One shape for the app server and the eval, so the model always sees the same thing.
 // history: up to 3 earlier turns, each {user, calls: [{tool, args, result}]}; context: what the map shows now.
@@ -74,6 +77,7 @@ export const MAX_CALLS = 5;
 export function chatMessages({ message, history = [], context = {} }) {
   const view = [
     context.near && `The map is centered near ${context.near} (zoom ${context.zoom}).`,
+    context.last && `Latest visible result: ${context.last}.`,
     context.selected && `Selected on the map: ${context.selected}.`,
     context.me && `The user's location is known, so "@me" works.`,
   ].filter(Boolean);

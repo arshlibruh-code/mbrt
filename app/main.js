@@ -142,8 +142,9 @@ function turnText(t) {
     else if (li.matches(".bad")) out.push(`! ${text}${raw ? ` (${raw})` : ""}`);
     else if (li.matches(".note")) out.push(`  ${text}`);
     else if (li.matches(".chips")) {
-      const offered = [...li.querySelectorAll("button:not(.copy-all)")].map((b) => b.textContent);
+      const offered = li.offered ?? [...li.querySelectorAll("button:not(.copy-all)")].map((b) => b.textContent);
       if (offered.length) out.push(`  options: ${offered.join(" | ")}`);
+      if (li.chosen) out.push(`  chose: ${li.chosen}`);
     }
   }
   const st = t.querySelector(".stats");
@@ -327,7 +328,8 @@ function onGhosts(coords) {
 
 // pick on map: the next click resolves to the place under it
 let picking = null;
-function pickOnMap() {
+let pickedCoord = null;
+function pickOnMap(exact = false) {
   picking?.(null);
   document.body.classList.add("picking");
   stopSpin();
@@ -337,6 +339,7 @@ function pickOnMap() {
       document.body.classList.remove("picking");
       if (!lngLat) return resolve("");
       const coord = [lngLat.lng, lngLat.lat];
+      if (exact) { pickedCoord = coord; return resolve("@picked"); }
       placeNear(coord).then((name) => resolve(name || `${coord[1].toFixed(5)}, ${coord[0].toFixed(5)}`)).catch(() => resolve(`${coord[1].toFixed(5)}, ${coord[0].toFixed(5)}`));
     };
   });
@@ -567,11 +570,12 @@ function suggest(list) {
     return [name, () => send(text), `<i>${i + 1}</i>`, rest, text];
   }));
   li.classList.add("offers");
+  li.offered = [...list];
 }
 addEventListener("keydown", (e) => {
   if (e.target.closest("input, textarea, select") || e.metaKey || e.ctrlKey || e.altKey) return;
   const offers = [...document.querySelectorAll("#log .offers")].at(-1);
-  offers?.children[Number(e.key) - 1]?.click();
+  [...offers?.querySelectorAll("button:not(.copy-all):not([hidden])") ?? []][Number(e.key) - 1]?.click();
 });
 // a row of small buttons under the current turn: [label, onClick]
 function chips(items) {
@@ -585,7 +589,20 @@ function chips(items) {
     if (sub) b.append(Object.assign(document.createElement("small"), { textContent: sub }));
     if (title) b.title = title;
     if (icon) b.insertAdjacentHTML("afterbegin", icon);
-    b.addEventListener("click", fn);
+    b.addEventListener("click", async (e) => {
+      if (li.chosen) return;
+      if (li.matches(".offers")) {
+        li.chosen = title || label;
+        for (const other of li.closest(".turn").querySelectorAll(".offers button:not(.copy-all)")) other.hidden = other !== b;
+        b.disabled = true;
+      }
+      const completed = await fn(e);
+      if (completed === false) {
+        delete li.chosen;
+        for (const other of li.closest(".turn").querySelectorAll(".offers button:not(.copy-all)")) other.hidden = false;
+        b.disabled = false;
+      }
+    });
     li.append(b);
   }
   linesEl().append(li);
@@ -753,7 +770,7 @@ function chart(profile) {
   (turnEl ?? newTurn()).append(box);
 }
 
-const baseCtx = { log, chart, stats, result, suggest, mapAction, latestArea, buildings, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
+const baseCtx = { log, chart, stats, result, suggest, mapAction, latestArea, buildings, selected: () => drawn.find((f) => f.properties.fid === selectedFid), picked: () => pickedCoord };
 
 // ---- the form is generated from the same tool schema the model will fill
 
@@ -793,7 +810,7 @@ const remember = (turn) => ((history = [...history, turn].slice(-3)), hints.foll
 async function viewContext() {
   const zoom = map.getZoom(), sel = baseCtx.selected();
   const near = zoom >= 5 ? await placeNear(map.getCenter().toArray()).catch(() => "") : "";
-  return { zoom, near, selected: sel ? `${sel.properties.kind} ${sel.properties.label}` : "", me: !!knownMe };
+  return { zoom, near, selected: sel ? `${sel.properties.kind} ${sel.properties.label}` : "", me: !!knownMe, last: drawn.filter((f) => !f.properties.hidden).at(-1)?.properties.label ?? "" };
 }
 
 // The model sometimes garbles a place it copies from an earlier turn ("Manali" -> "Manabi", "Koramangala" -> "Koroglob?").
@@ -1132,7 +1149,16 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     chart: (p) => stale() || chart(p),
     stats: (r) => stale() || stats(r),
     result: (text, status) => stale() || ((last = text), landed(), result(text, status)),
-    reply: (text, kind) => stale() || ((last = text), landed(), reply(text, kind)),
+    reply: (text, kind) => {
+      if (stale()) return;
+      last = text; landed(); reply(text, kind);
+      if (kind === "clarify" && /point|place|where|center|location|which area/i.test(text)) {
+        const original = sent || history.at(-1)?.user || "";
+        const resume = (place) => send(`${original}\nUse ${place} as the missing location.`);
+        const row = chips([["pick on map", async () => { const place = await pickOnMap(true); if (place) resume(place); else return false; }], ["my location", () => resume("@me")]]);
+        row.classList.add("offers"); row.offered = ["pick on map", "my location"];
+      }
+    },
     suggest: (list) => stale() || suggest(list),
   };
   if (!validate[call.tool]?.(call.args)) {
@@ -1150,6 +1176,17 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     safely("ping", () => looks.arrive(run, feats));
     refresh();
     if (fit) fitTo(feats);
+    if (feats.some((f) => AREAS.includes(f.properties.kind))) {
+      const area = feats.filter((f) => AREAS.includes(f.properties.kind)).sort((a, b) => turfArea(b) - turfArea(a))[0];
+      const row = chips([["summary", "summary"], ["cafés", "places"], ["green cover", "green"], ["roads", "roads"], ["terrain", "terrain"], ["flood level…", "flood"], ["3D buildings", "buildings"], ["notable places", "wiki"], ["earthquakes", "quakes"]].map(([label, what]) => [label, () => {
+        if (!drawn.includes(area) || area.properties.hidden) return;
+        selectedFid = area.properties.fid; refresh();
+        if (what === "flood") { send("Show flooding inside the selected area, ask me for the water level in metres first."); return; }
+        form.set("inside", { area: "@selected", what, ...(what === "places" ? { kind: "cafes" } : {}) });
+        $("form").requestSubmit();
+      }]));
+      row.classList.add("inside-options");
+    }
     if (call.tool === "isochrone")
       chips([["3D", (e) => looks.lift(run, feats, e.currentTarget)]]);
     return { ok: true, result: last, feats };

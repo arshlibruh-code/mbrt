@@ -2,7 +2,7 @@
 // center; an isochrone rests as a gradient of its contours; places, lengths and areas carry their names and
 // numbers as small chips in the app's own type, which step aside when they collide or slip behind the chat. On a tap,
 // an isochrone lifts into terrain (height is time left). The looks come from the iso.html comparison page.
-import { featureCollection, difference, area as turfArea, bbox, lineString, lineIntersect, polygonToLine, distance, pointOnFeature, centroid, along, length as lineLength, booleanPointInPolygon } from "@turf/turf";
+import { featureCollection, difference, area as turfArea, bbox, lineString, lineIntersect, polygonToLine, distance, pointOnFeature, centroid, along, length as lineLength, booleanPointInPolygon, lineSliceAlong, circle } from "@turf/turf";
 import { Marker } from "maplibre-gl";
 
 const AREAS = ["buffer", "isochrone", "polygon", "boundary"];
@@ -38,15 +38,22 @@ const centerOf = (feats) => feats.find((f) => f.properties.kind === "marker")?.g
 
 export function createLooks(map) {
   let ping = null, lift = null, ticks = featureCollection([]), raf = 0;
+  const reveals = new Map();
+  let visibleNow = [];
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   const spots = new Map(); // fid -> where its chip sits, worked out once
   const chips = new Map(); // key -> { marker, el, prio, run }
 
   function layers() {
+    map.addSource("reveal", { type: "geojson", data: featureCollection([]) });
+    map.addLayer({ id: "reveal", type: "line", source: "reveal", paint: { "line-color": "#F1F2F3", "line-width": 2.5 } }, "points");
+    map.addSource("ranges", { type: "geojson", data: featureCollection([]) });
+    map.addLayer({ id: "ranges", type: "line", source: "ranges", paint: { "line-color": "#BEC2C7", "line-width": 0.7, "line-opacity": 0.45, "line-dasharray": [2, 4] } }, "points");
     map.addSource("ticks", { type: "geojson", data: ticks });
     map.addLayer({ id: "mark-tick", type: "circle", source: "ticks", paint: { "circle-radius": 2.5, "circle-color": "#F1F2F3", "circle-stroke-color": "#121518", "circle-stroke-width": 1 } }, "points");
     map.addSource("lift", { type: "geojson", data: lift?.data ?? featureCollection([]) });
     map.addLayer({ id: "lift", type: "fill-extrusion", source: "lift", paint: { "fill-extrusion-color": RAMP(["get", "from"]), "fill-extrusion-opacity": 0.92, "fill-extrusion-height": ["get", "h"] } }, "points");
-    if (ping || lift) wake();
+    if (ping || lift || reveals.size) wake();
   }
 
   // where a feature's chip goes. Isochrones and buffers: where a ray due west of the center leaves the edge, so
@@ -82,6 +89,16 @@ export function createLooks(map) {
   }
 
   function sync(visible) {
+    visibleNow = visible;
+    for (const [fid] of reveals) if (!visible.some((f) => f.properties.fid === fid)) reveals.delete(fid);
+    for (const fid of spots.keys()) if (!visible.some((f) => f.properties.fid === fid)) spots.delete(fid);
+    const rings = visible.filter((f) => f.properties.kind === "buffer").flatMap((f) => {
+      const c = centroid(f).geometry.coordinates;
+      const radius = distance(c, f.geometry.coordinates[0][0]);
+      return [0.25, 0.5, 0.75].map((fraction) => polygonToLine(circle(c, radius * fraction, { steps: 96 })));
+    });
+    map.getSource("ranges")?.setData(featureCollection(rings));
+    paintReveal(performance.now());
     const runs = new Set(visible.map((f) => f.properties.run));
     if (lift && !runs.has(lift.run)) setLift(null);
     const keep = new Set(), tickPts = [];
@@ -130,6 +147,14 @@ export function createLooks(map) {
 
   // a new area: hidden until the camera lands, then a front runs from its center to its edge
   function arrive(run, feats) {
+    if (reduced()) return;
+    for (const f of feats.filter((f) => ["route", "line"].includes(f.properties.kind))) {
+      const parts = f.geometry.type === "LineString" ? [f.geometry.coordinates] : f.geometry.coordinates;
+      const lines = parts.map((part) => lineString(part));
+      reveals.set(f.properties.fid, { f, lines, lengths: lines.map((line) => lineLength(line)), t0: 0 });
+    }
+    const startLines = () => { for (const r of reveals.values()) if (!r.t0) r.t0 = performance.now(); wake(); };
+    setTimeout(() => map.isMoving() ? map.once("moveend", startLines) : startLines(), 60);
     if (!feats.some((f) => AREAS.includes(f.properties.kind))) return;
     ping = { run, f: -1, t0: 0, ms: feats.some((f) => f.properties.kind === "isochrone") ? 1600 : 350 };
     paintPing();
@@ -166,10 +191,37 @@ export function createLooks(map) {
     wake();
   }
 
+  function paintReveal(now) {
+    const out = [];
+    for (const [fid, r] of reveals) {
+      const progress = r.t0 ? Math.min(1, (now - r.t0) / 1200) : 0;
+      if (progress >= 1) { reveals.delete(fid); continue; }
+      const firstPart = out.length;
+      let remaining = r.lengths.reduce((a, b) => a + b, 0) * progress;
+      for (const [i, line] of r.lines.entries()) {
+        const amount = Math.min(remaining, r.lengths[i]);
+        if (amount > 0) out.push(lineSliceAlong(line, 0, amount));
+        remaining -= amount;
+      }
+      const chip = chips.get(fid);
+      const tip = out.length > firstPart ? out.at(-1).geometry.coordinates.at(-1) : null;
+      if (chip && tip) { chip.marker.setLngLat(tip); chip.el.textContent = `${(r.lengths.reduce((a, b) => a + b, 0) * progress).toFixed(1)} km`; }
+    }
+    for (const f of visibleNow) if (!reveals.has(f.properties.fid) && ["route", "line"].includes(f.properties.kind)) {
+      const chip = chips.get(f.properties.fid), s = spots.get(f.properties.fid);
+      if (chip && s) { chip.marker.setLngLat(s.at); chip.el.textContent = s.text; }
+    }
+    map.getSource("reveal")?.setData(featureCollection(out));
+    const hidden = ["!", ["in", ["get", "fid"], ["literal", [...reveals.keys()]]]];
+    for (const [id, kinds] of [["lines", ["route"]], ["straight", ["line"]], ["line-casing", ["route", "line"]]])
+      if (map.getLayer(id)) map.setFilter(id, ["all", ["in", ["get", "kind"], ["literal", kinds]], hidden]);
+  }
+
   const wake = () => (raf ||= requestAnimationFrame(tick));
   function tick(now) {
     raf = 0;
     let more = false;
+    if (reveals.size) { paintReveal(now); more = [...reveals.values()].some((r) => r.t0); }
     if (ping && ping.t0) {
       ping.f = (now - ping.t0) / ping.ms;
       if (ping.f > 1.6) (ping = null), paintPing();

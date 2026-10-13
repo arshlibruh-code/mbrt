@@ -200,6 +200,8 @@
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 -1px 0 rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.32);
       transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background 0.2s;
       animation: chip-in 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+    #log .chips button[hidden] { display: none; }
+    #log .chips button:disabled { cursor: default; }
     #log .chips button:hover { transform: translateY(-1px); background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06) 55%, rgba(255, 255, 255, 0.1));
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.22), 0 12px 30px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(8, 155, 223, 0.35); }
     #log .chips button:active { transform: translateY(0) scale(0.97); transition-duration: 0.06s; }

@@ -73,6 +73,11 @@ export async function placeNear([lon, lat]) {
 
 // name -> { coord: [lon, lat], label }
 async function geocode(name, ctx) {
+  if (name === "@picked") {
+    const coord = ctx.picked?.();
+    if (!coord) throw new Error("pick a point on the map first");
+    return { coord: [...coord], label: "picked point" };
+  }
   if (name === "@me") {
     const pos = await new Promise((ok, fail) => navigator.geolocation.getCurrentPosition(ok, fail, { timeout: 15000 }))
       .catch((e) => { throw new Error(`location: ${e.message}`); });
