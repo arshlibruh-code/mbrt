@@ -39,9 +39,10 @@ export const TOOLS = [
       level_m: { type: "number" },
       since: { type: "number" },
     }, ["area", "what"]),
-  tool("map", "Change the map itself: style (street, satellite, dark), zoom level, center on coordinates, toggle 3D terrain, clear layers, or locate the user.",
+  tool("map", "Change the map itself: style (street, satellite, dark), zoom level, center on coordinates, toggle 3D terrain, show or hide the basemap's place labels (on: true or false), clear layers, or locate the user.",
     {
-      action: { type: "string", enum: ["style", "zoom", "center", "terrain", "clear", "locate"] },
+      action: { type: "string", enum: ["style", "zoom", "center", "terrain", "labels", "clear", "locate"] },
+      on: { type: "boolean" },
       style: { type: "string", enum: ["street", "satellite", "dark"] },
       zoom: { type: "number" },
       lat: { type: "number" },

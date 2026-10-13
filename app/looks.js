@@ -1,8 +1,10 @@
-// How areas look, beyond the plain style in main.js. A new area arrives with a ping that runs out from its
-// center; an isochrone rests as a gradient of its contours; every area carries its number on the map. On a tap,
+// How results look, beyond the plain style in main.js. A new area arrives with a ping that runs out from its
+// center; an isochrone rests as a gradient of its contours; places, lengths and areas carry their names and
+// numbers as small chips in the app's own type, which step aside when they collide or slip behind the chat. On a tap,
 // an isochrone lifts into terrain (height is time left) or fills with traffic (cars on real Valhalla drives at
 // road speed). One clock drives all of it, from the iso.html comparison page.
-import { featureCollection, difference, area as turfArea, bbox, lineString, lineIntersect, polygonToLine, distance, pointOnFeature, centroid, along, length as lineLength } from "@turf/turf";
+import { featureCollection, difference, area as turfArea, bbox, lineString, lineIntersect, polygonToLine, distance, pointOnFeature, centroid, along, length as lineLength, booleanPointInPolygon } from "@turf/turf";
+import { Marker } from "maplibre-gl";
 import { valhalla } from "./execute.js";
 
 const AREAS = ["buffer", "isochrone", "polygon", "boundary"];
@@ -18,7 +20,7 @@ const ROUTES = 10; // traffic: drives fetched, about one a second from the free 
 
 // the resting look of every area; during a ping, the arriving run shows each contour as the front passes it
 export function fillPaint(ping) {
-  const base = ["match", ["get", "kind"], "isochrone", 0.18, "boundary", 0.06, 0.1];
+  const base = ["match", ["get", "kind"], "isochrone", 0.18, "boundary", 0.08, 0.16];
   return {
     "fill-color": ["case", ISO, RAMP(FRAC), "#BEC2C7"],
     "fill-opacity": ping ? ["case", ["==", ["get", "run"], ping.run], ["*", base, clamp01(["/", ["-", ping.f, FRAC], 0.15])], base] : base,
@@ -26,13 +28,14 @@ export function fillPaint(ping) {
 }
 export function edgePaint(ping) {
   const color = ["case", ISO, RAMP(FRAC), "#E1E2E4"];
-  if (!ping) return { "line-color": color, "line-width": 1.2, "line-opacity": 0.8 };
+  const width = ["case", ISO, 1.2, 1.8];
+  if (!ping) return { "line-color": color, "line-width": width, "line-opacity": 0.9 };
   const mine = ["==", ["get", "run"], ping.run], since = ["-", ping.f, FRAC];
   const glow = ["^", ["e"], ["/", ["-", 0, ["max", 0, since]], 0.12]];
   return {
     "line-color": color,
-    "line-width": ["case", mine, ["+", 1.2, ["*", 2.5, glow]], 1.2],
-    "line-opacity": ["case", mine, ["case", ["<", since, 0], 0, ["min", 1, ["+", 0.8, ["*", 0.2, glow]]]], 0.8],
+    "line-width": ["case", mine, ["+", width, ["*", 2.5, glow]], width],
+    "line-opacity": ["case", mine, ["case", ["<", since, 0], 0, ["min", 1, ["+", 0.9, ["*", 0.1, glow]]]], 0.9],
   };
 }
 
@@ -54,13 +57,13 @@ const centerOf = (feats) => feats.find((f) => f.properties.kind === "marker")?.g
 const outerRing = (f) => (f.geometry.type === "Polygon" ? f.geometry.coordinates[0] : f.geometry.coordinates.reduce((a, b) => (b[0].length > a[0].length ? b : a))[0]);
 
 export function createLooks(map) {
-  let ping = null, lift = null, traffic = null, marks = featureCollection([]), raf = 0;
-  const markCache = new Map(); // fid -> where its number sits
+  let ping = null, lift = null, traffic = null, ticks = featureCollection([]), raf = 0;
+  const spots = new Map(); // fid -> where its chip sits, worked out once
+  const chips = new Map(); // key -> { marker, el, prio, run }
 
   function layers() {
-    map.addSource("marks", { type: "geojson", data: marks });
-    map.addLayer({ id: "mark-tick", type: "circle", source: "marks", paint: { "circle-radius": 2.5, "circle-color": "#F1F2F3", "circle-stroke-color": "#121518", "circle-stroke-width": 1 } }, "points");
-    map.addLayer({ id: "mark-label", type: "symbol", source: "marks", layout: { "text-field": ["get", "text"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-anchor": "bottom", "text-offset": [0, -0.5], "text-letter-spacing": 0.04 }, paint: { "text-color": "#F1F2F3", "text-halo-color": "#121518", "text-halo-width": 1.4 } }, "points");
+    map.addSource("ticks", { type: "geojson", data: ticks });
+    map.addLayer({ id: "mark-tick", type: "circle", source: "ticks", paint: { "circle-radius": 2.5, "circle-color": "#F1F2F3", "circle-stroke-color": "#121518", "circle-stroke-width": 1 } }, "points");
     map.addSource("lift", { type: "geojson", data: lift?.data ?? featureCollection([]) });
     map.addLayer({ id: "lift", type: "fill-extrusion", source: "lift", paint: { "fill-extrusion-color": RAMP(["get", "from"]), "fill-extrusion-opacity": 0.92, "fill-extrusion-height": ["get", "h"] } }, "points");
     map.addSource("roads", { type: "geojson", data: featureCollection([]) });
@@ -71,31 +74,85 @@ export function createLooks(map) {
     if (ping || lift || traffic) wake();
   }
 
-  // every visible area's number sits where a ray due west of its center leaves it; an isochrone's center is
-  // its start, so its contours line up as a scale
+  // where a feature's chip goes. Isochrones and buffers: where a ray due west of the center leaves the edge, so
+  // contours line up as a scale. Polygons and boundaries: the middle. Lines: halfway along.
+  function spot(f, visible) {
+    const { kind, fid, run, label } = f.properties;
+    if (spots.has(fid)) return spots.get(fid);
+    let at, text = label, cls = "pin", prio = 0, tick = false;
+    if (kind === "marker") at = f.geometry.coordinates;
+    else if (kind === "route" || kind === "line") {
+      const parts = f.geometry.type === "LineString" ? [f.geometry.coordinates] : f.geometry.coordinates;
+      const part = lineString(parts.reduce((a, b) => (b.length > a.length ? b : a)));
+      at = along(part, lineLength(part) / 2).geometry.coordinates;
+      cls = "len";
+      prio = 2;
+    } else if (kind === "polygon" || kind === "boundary") {
+      const c = centroid(f);
+      at = (booleanPointInPolygon(c, f) ? c : pointOnFeature(f)).geometry.coordinates;
+      text = `${(turfArea(f) / 1e6).toLocaleString("en-IN", { maximumFractionDigits: 0 })} km²`;
+      cls = "big";
+      prio = 1;
+    } else if (kind === "isochrone" || kind === "buffer") {
+      const c = (kind === "isochrone" && centerOf(visible.filter((g) => g.properties.run === run))) || centroid(f).geometry.coordinates;
+      const hits = lineIntersect(lineString([c, [bbox(f)[0] - 1, c[1]]]), polygonToLine(f)).features;
+      at = (hits.reduce((a, b) => (distance(c, b) > distance(c, a) ? b : a), hits[0]) ?? pointOnFeature(f)).geometry.coordinates;
+      cls = "scale";
+      prio = 3 + (1 - (f.properties.frac ?? 1)); // the outer edge wins a collision
+      tick = true;
+    } else return null;
+    const s = { at, text, cls, prio, tick, run };
+    spots.set(fid, s);
+    return s;
+  }
+
   function sync(visible) {
     const runs = new Set(visible.map((f) => f.properties.run));
     if (lift && !runs.has(lift.run)) setLift(null);
     if (traffic && !runs.has(traffic.run)) setTraffic(null);
-    const out = [];
+    const keep = new Set(), tickPts = [];
     for (const f of visible) {
-      if (!AREAS.includes(f.properties.kind)) continue;
-      let m = markCache.get(f.properties.fid);
-      if (!m) {
-        const kind = f.properties.kind;
-        const c = (kind === "isochrone" && centerOf(visible.filter((g) => g.properties.run === f.properties.run))) || centroid(f).geometry.coordinates;
-        const [w] = bbox(f);
-        const hits = lineIntersect(lineString([c, [w - 1, c[1]]]), polygonToLine(f)).features;
-        const far = hits.reduce((a, b) => (distance(c, b) > distance(c, a) ? b : a), hits[0]) ?? pointOnFeature(f);
-        const text = kind === "boundary" ? `${(turfArea(f) / 1e6).toLocaleString("en-IN", { maximumFractionDigits: 0 })} km²` : f.properties.label;
-        m = { type: "Feature", geometry: far.geometry, properties: { text, run: f.properties.run } };
-        markCache.set(f.properties.fid, m);
-      }
-      out.push(m);
+      const s = spot(f, visible);
+      if (!s) continue;
+      const key = f.properties.fid;
+      keep.add(key);
+      if (s.tick) tickPts.push({ type: "Feature", geometry: { type: "Point", coordinates: s.at }, properties: { run: s.run } });
+      if (chips.has(key)) continue;
+      const el = document.createElement("div");
+      el.className = `map-chip ${s.cls}`;
+      const n = s.cls === "pin" && /^(\d+)\. (.*)$/.exec(s.text); // an order ("1. Hebbal") becomes a quiet index cell
+      if (n) el.innerHTML = "<i></i><span></span>", (el.firstChild.textContent = n[1]), (el.lastChild.textContent = n[2]);
+      else el.textContent = s.text;
+      const anchor = s.cls === "big" || s.cls === "len" ? "center" : "bottom";
+      const marker = new Marker({ element: el, anchor, offset: anchor === "bottom" ? [0, s.cls === "pin" ? -9 : -5] : [0, 0] }).setLngLat(s.at).addTo(map);
+      chips.set(key, { marker, el, prio: s.prio, run: s.run, anchor });
     }
-    marks = featureCollection(out);
-    map.getSource("marks")?.setData(marks);
+    for (const [key, c] of chips) if (!keep.has(key)) c.marker.remove(), chips.delete(key);
+    ticks = featureCollection(tickPts);
+    map.getSource("ticks")?.setData(ticks);
+    layout();
   }
+
+  // chips in priority order; one that would overlap a placed chip, the feed or the chat bar fades out
+  function layout() {
+    const feed = document.body.classList.contains("has-feed") ? document.getElementById("feed")?.getBoundingClientRect() : null;
+    const barTop = innerHeight - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--bar-h")) || 0);
+    const box = map.getContainer().getBoundingClientRect();
+    const placed = [];
+    for (const c of [...chips.values()].sort((a, b) => a.prio - b.prio)) {
+      const p = map.project(c.marker.getLngLat()), w = c.el.offsetWidth, h = c.el.offsetHeight, { x: ox, y: oy } = c.marker.getOffset();
+      const x = box.left + p.x + ox - w / 2, y = box.top + p.y + oy - (c.anchor === "bottom" ? h : h / 2);
+      const r = { l: x - 2, t: y - 2, r: x + w + 2, b: y + h + 2 };
+      const hit = (q) => q && r.l < q.right && r.r > q.left && r.t < q.bottom && r.b > q.top;
+      const off = (ping && ping.run === c.run) || r.b > barTop || hit(feed) || placed.some((q) => hit({ left: q.l, right: q.r, top: q.t, bottom: q.b }));
+      c.el.classList.toggle("off", off);
+      if (!off) placed.push(r);
+    }
+  }
+  // a label that cannot be placed must never stop the map from moving
+  const safeLayout = () => { try { layout(); } catch (err) { console.warn("chips:", err); } };
+  map.on("move", safeLayout);
+  addEventListener("resize", safeLayout);
 
   // a new area: hidden until the camera lands, then a front runs from its center to its edge
   function arrive(run, feats) {
@@ -109,8 +166,8 @@ export function createLooks(map) {
     if (!map.getLayer("area-fill")) return;
     for (const [k, v] of Object.entries(fillPaint(ping))) map.setPaintProperty("area-fill", k, v);
     for (const [k, v] of Object.entries(edgePaint(ping))) map.setPaintProperty("area-edge", k, v);
-    const hide = ping ? ["!=", ["get", "run"], ping.run] : null;
-    for (const id of ["mark-tick", "mark-label"]) map.getLayer(id) && map.setFilter(id, hide);
+    map.getLayer("mark-tick") && map.setFilter("mark-tick", ping ? ["!=", ["get", "run"], ping.run] : null);
+    layout();
   }
 
   // 3D: each band rises to the time left at its inner edge; the summit is the start. One run at a time.

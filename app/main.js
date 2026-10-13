@@ -197,6 +197,15 @@ map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-
 const BASEMAPS = ["satellite", "dark", "street"], SHORT = { satellite: "SAT", dark: "DARK", street: "MAP" };
 const nextBasemap = (name) => BASEMAPS[(BASEMAPS.indexOf(name) + 1) % BASEMAPS.length];
 let basemap = "satellite";
+// the basemap's own place names start hidden: results carry their own labels, and the base ones crowd them.
+// One switch covers every basemap (the satellite's reference layer, the vector styles' text layers).
+let labelsOn = false, baseLabels = [];
+function setLabels(on) {
+  labelsOn = on;
+  for (const id of baseLabels) map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
+  const b = document.querySelector(".labels-btn");
+  if (b) b.setAttribute("aria-pressed", on), (b.title = `place labels: ${on ? "on" : "off"}, click to ${on ? "hide" : "show"}`);
+}
 function setBasemap(name) {
   basemap = name;
   map.setStyle(STYLES[name], { diff: false });
@@ -208,8 +217,9 @@ map.addControl({
   onAdd() {
     const div = document.createElement("div");
     div.className = "maplibregl-ctrl maplibregl-ctrl-group";
-    div.innerHTML = `<button type="button" class="basemap-btn" title="basemap: satellite, click for dark">SAT</button>`;
+    div.innerHTML = `<button type="button" class="basemap-btn" title="basemap: satellite, click for dark">SAT</button><button type="button" class="labels-btn" aria-pressed="false" title="place labels: off, click to show">ABC</button>`;
     div.firstChild.addEventListener("click", () => setBasemap(nextBasemap(basemap)));
+    div.lastChild.addEventListener("click", () => setLabels(!labelsOn));
     return div;
   },
   onRemove() {},
@@ -261,12 +271,15 @@ const AREAS = ["buffer", "isochrone", "polygon", "boundary"];
 const LINES = ["route", "line"];
 
 function addLayers() {
+  baseLabels = map.getStyle().layers.filter((l) => l.type === "symbol" || l.id === "sat-labels").map((l) => l.id);
+  setLabels(labelsOn);
   map.setProjection({ type: "globe" }); // a sphere when zoomed out; MapLibre flattens it as you zoom in
   map.setSky(basemap === "dark" ? SKY_DARK : SKY);
   map.addSource("drawn", { type: "geojson", data: { type: "FeatureCollection", features: drawn } });
   const isKind = (kinds) => ["in", ["get", "kind"], ["literal", kinds]];
   const sel = ["==", ["get", "fid"], ["literal", selectedFid]];
   map.addLayer({ id: "area-fill", type: "fill", source: "drawn", filter: isKind(AREAS), paint: fillPaint() });
+  map.addLayer({ id: "area-casing", type: "line", source: "drawn", filter: isKind(AREAS), paint: { "line-color": "#121518", "line-width": 4, "line-opacity": 0.4 } });
   map.addLayer({ id: "area-edge", type: "line", source: "drawn", filter: isKind(AREAS), paint: edgePaint() });
   map.addLayer({ id: "line-casing", type: "line", source: "drawn", filter: isKind(LINES),
     layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#121518", "line-width": 6, "line-opacity": 0.7 } });
@@ -290,10 +303,9 @@ function addLayers() {
     paint: { "circle-radius": 8, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#26A0D6", "circle-stroke-width": 2.5 } });
   const text = { "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 12 };
   const halo = { "text-color": "#E1E2E4", "text-halo-color": "#121518", "text-halo-width": 1.5 };
-  map.addLayer({ id: "point-labels", type: "symbol", source: "drawn", filter: ["==", ["geometry-type"], "Point"],
+  // places found inside an area can run to dozens, so they keep map text; everything else gets a chip (looks.js)
+  map.addLayer({ id: "point-labels", type: "symbol", source: "drawn", filter: ["all", ["==", ["geometry-type"], "Point"], ["!=", ["get", "kind"], "marker"]],
     layout: { ...text, "text-offset": [0, -0.9], "text-anchor": "bottom" }, paint: halo });
-  map.addLayer({ id: "line-labels", type: "symbol", source: "drawn", filter: isKind(LINES),
-    layout: { ...text, "symbol-placement": "line-center" }, paint: halo });
   map.addSource("ghosts", { type: "geojson", data: ghostData });
   map.addLayer({ id: "ghosts", type: "circle", source: "ghosts",
     paint: { "circle-radius": 6, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#089bdf", "circle-stroke-width": 1.5, "circle-stroke-opacity": 0.85 } });
@@ -302,6 +314,8 @@ function addLayers() {
 }
 // the ping, gradient, numbers on the map, 3D and traffic (looks.js)
 const looks = createLooks(map);
+// a look that breaks costs only the look: the result still draws and counts, and the trace says what happened
+const safely = (what, fn) => { try { fn(); } catch (err) { console.error(what, err); log("warn", what, "could not draw this part", `${err.name}: ${err.message}`); } };
 map.on("style.load", addLayers);
 
 // found places in the TOOL tab, drawn as hollow pins until the tool runs
@@ -331,7 +345,7 @@ function pickOnMap() {
 const refresh = () => {
   const visible = drawn.filter((f) => !f.properties.hidden);
   map.getSource("drawn")?.setData({ type: "FeatureCollection", features: visible });
-  looks.sync(visible);
+  safely("labels", () => looks.sync(visible));
   renderLayers();
   for (const id of ["selected-line", "selected-point"]) {
     if (!map.getLayer(id)) continue;
@@ -375,6 +389,10 @@ async function mapAction(a) {
     case "terrain":
       setTerrain(!terrainOn);
       result(`3D terrain ${terrainOn ? "on" : "off"}`);
+      return [];
+    case "labels":
+      setLabels(a.on ?? !labelsOn);
+      result(`place labels ${labelsOn ? "on" : "off"}`);
       return [];
     case "clear": {
       const kinds = !a.clear || a.clear === "all" ? null : CLEAR[a.clear];
@@ -533,17 +551,39 @@ function theoDone(ok, word) {
   copyChip();
 }
 // ready-to-run prompts the model offered; a tap runs one
+// the chips say only what differs between the offers ("Central Park" · "Eiffel Tower"), the way a person answers
+// "which one?"; the full request is the tooltip. With the cursor out of the box, keys 1 to 3 pick one.
 function suggest(list) {
-  chips(list.slice(0, 3).map((text) => [text, () => send(text)]));
+  list = list.slice(0, 3);
+  const words = list.map((t) => t.split(" "));
+  let pre = 0, post = 0;
+  if (list.length > 1) {
+    while (words.every((w) => w[pre] !== undefined && w[pre] === words[0][pre])) pre++;
+    while (words.every((w) => w.length - post - 1 > pre && w.at(-1 - post) === words[0].at(-1 - post))) post++;
+  }
+  const li = chips(list.map((text, i) => {
+    const mid = words[i].slice(pre, words[i].length - post).join(" ");
+    const [name, rest] = (mid && pre ? mid : text).split(/,\s*(.*)/);
+    return [name, () => send(text), `<i>${i + 1}</i>`, rest, text];
+  }));
+  li.classList.add("offers");
 }
+addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea, select") || e.metaKey || e.ctrlKey || e.altKey) return;
+  const offers = [...document.querySelectorAll("#log .offers")].at(-1);
+  offers?.children[Number(e.key) - 1]?.click();
+});
 // a row of small buttons under the current turn: [label, onClick]
 function chips(items) {
   const li = document.createElement("li");
   li.className = "chips";
-  for (const [label, fn, icon] of items) {
+  for (const [i, [label, fn, icon, sub, title]] of items.entries()) {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = label;
+    b.style.setProperty("--i", i); // they arrive one after another
+    if (sub) b.append(Object.assign(document.createElement("small"), { textContent: sub }));
+    if (title) b.title = title;
     if (icon) b.insertAdjacentHTML("afterbegin", icon);
     b.addEventListener("click", fn);
     li.append(b);
@@ -616,6 +656,7 @@ function said({ tool, args: a }) {
       case "map": return {
         style: [`Switching to ${a.style}…`, `Switched to ${a.style}`], zoom: [`Zooming to ${a.zoom}…`, `Zoomed to ${a.zoom}`],
         center: ["Moving the map…", `Centered on ${a.lat}, ${a.lon}`], terrain: ["Turning the terrain…", "Toggled 3D terrain"],
+        labels: [`${a.on === false ? "Hiding" : a.on ? "Showing" : "Switching"} place labels…`, `${a.on === false ? "Hid" : a.on ? "Showed" : "Switched"} place labels`],
         clear: ["Clearing…", `Cleared ${a.clear && a.clear !== "all" ? a.clear : "the map"}`], locate: ["Finding you…", "Found you"],
       }[a.action] ?? ["Changing the map…", "Changed the map"];
       case "reply": return ["Answering…", ""]; // the answer itself says it; Theo's line keeps only the time
@@ -809,8 +850,10 @@ const VOICE = {
 let waitTimer = 0;
 // show a failure in the current turn; again() repeats what failed
 function fail(err, { message, again }) {
-  const voice = VOICE[err.kind]?.(err) ?? err.message;
-  const li = log("bad", "error", voice, err.raw ?? (voice !== err.message ? err.message : ""));
+  // a slip in mbrt's own code is said plainly, with the raw error folded away for whoever debugs it
+  const ours = !err.kind && /^(TypeError|ReferenceError|RangeError|SyntaxError)$/.test(err.name);
+  const voice = ours ? "Something broke on our side, not yours. Retry, or tell us" : VOICE[err.kind]?.(err) ?? err.message;
+  const li = log("bad", "error", voice, ours ? `${err.name}: ${err.message}` : err.raw ?? (voice !== err.message ? err.message : ""));
   const edit = () => {
     if (message) $("msg").value = message;
     $("msg").focus();
@@ -913,7 +956,9 @@ const hints = (() => {
     elevation_profile: ["switch to 3D terrain"],
     boundary: ["switch to satellite"],
   };
-  let queue = [], shown = "", full = "", timer = 0, paused = false;
+  // while your cursor is in the box a hint types on once and stays until you take it or leave; it only cycles
+  // while you are elsewhere. Tab takes what you just saw, even as it is leaving.
+  let queue = [], shown = "", full = "", timer = 0, paused = false, held = false, gen = 0, prev = null;
   const el = $("msg");
   const pickNext = async () => {
     if (!queue.length) {
@@ -925,35 +970,53 @@ const hints = (() => {
     return queue.shift();
   };
   const render = (txt) => (el.placeholder = txt + (document.activeElement === el && txt === full ? "   [tab]" : ""));
+  const wait = (ms) => new Promise((r) => (timer = setTimeout(r, ms)));
   async function cycle() {
     clearTimeout(timer);
     if (paused) return;
+    const me = ++gen, alive = () => !paused && me === gen;
+    if (full) prev = { text: full, at: Date.now() };
     full = await pickNext();
     // type on: each new letter arrives as a scrambled glyph for a moment, then resolves
-    for (let i = 1; i <= full.length && !paused; i++) {
+    for (let i = 1; i <= full.length && alive(); i++) {
       shown = full.slice(0, i);
       const tail = full.length - i > 0 ? GLYPHS[(Math.random() * GLYPHS.length) | 0] : "";
       render(shown + tail);
-      await new Promise((r) => (timer = setTimeout(r, 34)));
+      await wait(34);
     }
-    if (paused) return;
+    if (!alive()) return;
+    shown = full;
     render(full);
-    await new Promise((r) => (timer = setTimeout(r, 2600)));
-    for (let i = full.length; i >= 0 && !paused; i--) {
-      render(full.slice(0, i));
-      await new Promise((r) => (timer = setTimeout(r, 14)));
+    if (held) return;
+    await wait(2600);
+    if (!alive() || held) return;
+    prev = { text: full, at: Date.now() };
+    for (let i = full.length; i >= 0 && alive() && !held; i--) {
+      shown = full.slice(0, i);
+      render(shown);
+      await wait(14);
     }
-    if (!paused) timer = setTimeout(cycle, 300);
+    if (held && alive()) return (shown = full), render(full);
+    if (alive()) timer = setTimeout(cycle, 300);
   }
   el.addEventListener("keydown", (e) => {
-    if (e.key === "Tab" && !el.value && full && el.placeholder.startsWith(full)) {
-      e.preventDefault();
-      el.value = full;
-      fx.key(caretX());
-    }
+    if (e.key !== "Tab" || el.value) return;
+    // a hint that just left (or has barely begun replacing it) still counts for 1.5 s
+    const take = shown.length >= 4 ? full : prev && Date.now() - prev.at < 1500 ? prev.text : "";
+    if (!take) return;
+    e.preventDefault();
+    el.value = take;
+    fx.key(caretX());
   });
-  el.addEventListener("focus", () => render(shown === full ? full : shown));
-  el.addEventListener("blur", () => render(shown));
+  el.addEventListener("focus", () => {
+    held = true;
+    render(shown);
+  });
+  el.addEventListener("blur", () => {
+    held = false;
+    render(shown);
+    if (!paused) timer = setTimeout(cycle, 2600);
+  });
   return {
     pause() { paused = true; clearTimeout(timer); },
     resume() { if (!paused) return; paused = false; queue.length ? cycle() : timer = setTimeout(cycle, 600); },
@@ -1084,7 +1147,7 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     const run = nextRun++;
     for (const f of feats) Object.assign(f.properties, { fid: nextFid++, run, tool: call.tool, call: structuredClone(call), by, result: last });
     drawn.push(...feats);
-    looks.arrive(run, feats);
+    safely("ping", () => looks.arrive(run, feats));
     refresh();
     if (fit) fitTo(feats);
     if (call.tool === "isochrone")
