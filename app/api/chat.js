@@ -20,6 +20,7 @@ function cleanHistory(h) {
 }
 const cleanContext = (c = {}) => ({
   near: text(c.near, 120),
+  last: text(c.last, 120),
   zoom: Number.isFinite(c.zoom) ? Math.round(c.zoom * 10) / 10 : null,
   selected: text(c.selected, 120),
   me: c.me === true,
