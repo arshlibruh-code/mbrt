@@ -8,7 +8,7 @@ Chat to a map. Type "30 min drive from Koramangala" and get the reachable area d
 
 A small model, Theo, reads the message and picks one of 12 tools as JSON (`{tool: "isochrone", args: {center: "Koramangala", unit: "minutes", values: [30]}}`). It never produces coordinates. Plain code does the rest: Photon finds the places, OSRM routes, Valhalla draws reach and heights, Turf draws buffers and polygons, Nominatim gives boundaries.
 
-Every tool also has a form, so the map works with no model at all. The feed reads like a chat: your message, one line from Theo ("Mapped a 30 min drive from Koramangala · 2.1 s"), the result. ▸ unfolds every step: the model, its tokens, what the geocoder found, the exact call. "copy conversation" copies the whole session as text.
+A new area pings out from its center when the camera lands, then rests with its number on the map. Every tool also has a form, so the map works with no model at all. The feed reads like a chat: your message, one line from Theo ("Mapped a 30 min drive from Koramangala · 2.1 s"), the result. ▸ unfolds every step: the model, its tokens, what the geocoder found, the exact call. "copy conversation" copies the whole session as text.
 
 | tool | does |
 |---|---|
@@ -16,7 +16,7 @@ Every tool also has a form, so the map works with no model at all. The feed read
 | route | road route through waypoints, with distance and time |
 | line | straight lines between places |
 | buffer | radius around each center |
-| isochrone | area reachable in N minutes or km |
+| isochrone | area reachable in N minutes or km, drawn as four bands; chips lift it into 3D or fill it with traffic |
 | polygon | area between places |
 | elevation_profile | height chart along a route or a selected line |
 | boundary | official outline of a state, district or city |

@@ -190,18 +190,21 @@ export async function execute(call, ctx) {
     }
     case "isochrone": {
       const [p] = await geocodeAll([a.center], ctx);
-      const key = a.unit === "km" ? "distance" : "time";
+      const key = a.unit === "km" ? "distance" : "time", unit = a.unit === "km" ? "km" : "min";
+      const max = Math.max(...a.values);
+      // one value is drawn as four bands (a quarter each), so the reach reads as a gradient; Valhalla takes 4 at most
+      const values = a.values.length === 1 ? [0.25, 0.5, 0.75, 1].map((q) => +(max * q).toFixed(1)) : [...a.values].sort((x, y) => x - y).slice(-4);
       const body = await valhalla("isochrone", {
         locations: [{ lon: p.coord[0], lat: p.coord[1] }],
         costing: COSTING[a.profile] ?? "auto",
-        contours: [...a.values].sort((x, y) => x - y).map((v) => ({ [key]: v })),
+        contours: values.map((v) => ({ [key]: v })),
         polygons: true,
       });
-      ctx.log("ok", "Valhalla", `isochrone ${a.values.join(", ")} ${a.unit} ${a.profile}`);
+      ctx.log("ok", "Valhalla", `isochrone ${values.join(", ")} ${a.unit} ${a.profile}`);
       const outer = body.features.reduce((m, f) => Math.max(m, turf.area(f) / 1e6), 0);
-      ctx.result(`${km1(outer)} km² reachable in ${Math.max(...a.values)} ${a.unit === "km" ? "km" : "min"}`);
+      ctx.result(`${km1(outer)} km² reachable in ${max} ${unit}`);
       return [
-        ...body.features.map((f) => feature({ type: "Feature", geometry: f.geometry, properties: {} }, "isochrone", `${f.properties.contour} ${a.unit}`)),
+        ...body.features.map((f) => feature({ type: "Feature", geometry: f.geometry, properties: {} }, "isochrone", `${f.properties.contour} ${unit}`, { frac: f.properties.contour / max })),
         feature(turf.point(p.coord), "marker", p.label),
       ];
     }

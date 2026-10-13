@@ -11,6 +11,7 @@ import { createBarFx } from "./bar-fx.js";
 import * as brain from "./brain.js";
 import { createBrainPicker } from "./brain-picker.js";
 import { createBrainChip } from "./brain-chip.js";
+import { createLooks, fillPaint, edgePaint } from "./looks.js";
 
 maplibregl.setWorkerUrl(workerUrl);
 
@@ -265,10 +266,8 @@ function addLayers() {
   map.addSource("drawn", { type: "geojson", data: { type: "FeatureCollection", features: drawn } });
   const isKind = (kinds) => ["in", ["get", "kind"], ["literal", kinds]];
   const sel = ["==", ["get", "fid"], ["literal", selectedFid]];
-  map.addLayer({ id: "area-fill", type: "fill", source: "drawn", filter: isKind(AREAS),
-    paint: { "fill-color": "#BEC2C7", "fill-opacity": ["match", ["get", "kind"], "isochrone", 0.14, "boundary", 0.06, 0.1] } });
-  map.addLayer({ id: "area-edge", type: "line", source: "drawn", filter: isKind(AREAS),
-    paint: { "line-color": "#E1E2E4", "line-width": 1.2, "line-opacity": 0.8 } });
+  map.addLayer({ id: "area-fill", type: "fill", source: "drawn", filter: isKind(AREAS), paint: fillPaint() });
+  map.addLayer({ id: "area-edge", type: "line", source: "drawn", filter: isKind(AREAS), paint: edgePaint() });
   map.addLayer({ id: "line-casing", type: "line", source: "drawn", filter: isKind(LINES),
     layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#121518", "line-width": 6, "line-opacity": 0.7 } });
   map.addLayer({ id: "lines", type: "line", source: "drawn", filter: isKind(["route"]),
@@ -298,8 +297,11 @@ function addLayers() {
   map.addSource("ghosts", { type: "geojson", data: ghostData });
   map.addLayer({ id: "ghosts", type: "circle", source: "ghosts",
     paint: { "circle-radius": 6, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#089bdf", "circle-stroke-width": 1.5, "circle-stroke-opacity": 0.85 } });
+  looks.layers();
   if (terrainOn) setTerrain(true);
 }
+// the ping, gradient, numbers on the map, 3D and traffic (looks.js)
+const looks = createLooks(map);
 map.on("style.load", addLayers);
 
 // found places in the TOOL tab, drawn as hollow pins until the tool runs
@@ -327,7 +329,9 @@ function pickOnMap() {
 }
 
 const refresh = () => {
-  map.getSource("drawn")?.setData({ type: "FeatureCollection", features: drawn.filter((f) => !f.properties.hidden) });
+  const visible = drawn.filter((f) => !f.properties.hidden);
+  map.getSource("drawn")?.setData({ type: "FeatureCollection", features: visible });
+  looks.sync(visible);
   renderLayers();
   for (const id of ["selected-line", "selected-point"]) {
     if (!map.getLayer(id)) continue;
@@ -1079,8 +1083,11 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     const run = nextRun++;
     for (const f of feats) Object.assign(f.properties, { fid: nextFid++, run, tool: call.tool, call: structuredClone(call), by, result: last });
     drawn.push(...feats);
+    looks.arrive(run, feats);
     refresh();
     if (fit) fitTo(feats);
+    if (call.tool === "isochrone")
+      chips([["3D", (e) => looks.lift(run, feats, e.currentTarget)], ["traffic", (e) => looks.traffic(run, feats, call, e.currentTarget)]]);
     return { ok: true, result: last, feats };
   } catch (err) {
     return { ok: false, result: `failed: ${err.message}`, feats: [], err };
