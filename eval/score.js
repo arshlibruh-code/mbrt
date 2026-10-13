@@ -37,6 +37,7 @@ export function samePlace(a, b) {
   return false;
 }
 
+const stem = (s) => s.toLowerCase().normalize("NFD").replace(/[^a-z ]/g, "").trim().replace(/s$/, "").replace(/e$/, "");
 const sameNum = (a, b) => typeof a === "number" && Math.abs(a - b) <= Math.max(0.01 * Math.abs(b), 1e-9);
 
 function sameSet(a, b, eq) {
@@ -64,6 +65,12 @@ const FIELDS = {
   },
   elevation_profile: { waypoints: sameTrip, profile: (a, b) => a === b },
   boundary: { place: samePlace },
+  // only what the expectation names is checked; kind matches on its stem ("cafe", "cafes", "Cafés")
+  inside: {
+    area: samePlace, what: (a, b) => a === b,
+    kind: (a, b) => b == null || (typeof a === "string" && stem(a) === stem(b)),
+    level_m: (a, b) => b == null || sameNum(a, b), since: (a, b) => b == null || sameNum(a, b),
+  },
   reply: {},
   plan: { steps: (a, b) => Array.isArray(a) && a.length === b.length },
 };

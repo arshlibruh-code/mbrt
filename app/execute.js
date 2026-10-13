@@ -1,6 +1,7 @@
 // Turn one {tool, args} call into geometry. Every place name goes through the geocoder; nothing here
 // trusts coordinates from a model. Each step reports to `log`, so failures show up instead of vanishing.
 import * as turf from "@turf/turf";
+import { inside } from "./inside.js";
 
 const PHOTON = "https://photon.komoot.io/api/";
 const VALHALLA = "https://valhalla1.openstreetmap.de"; // isochrones and heights
@@ -29,13 +30,13 @@ export function humanError(raw) {
   return err;
 }
 const lastCall = {};
-async function politeFetch(base, url, init) {
-  const wait = (lastCall[base] ?? 0) + gaps[base] - Date.now();
+export async function politeFetch(base, url, init) {
+  const wait = (lastCall[base] ?? 0) + (gaps[base] ?? 1000) - Date.now(); // 1 per second for any other service
   lastCall[base] = Date.now() + Math.max(wait, 0);
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   let res;
   try {
-    res = await fetch(url, { ...init, signal: AbortSignal.timeout(30000) });
+    res = await fetch(url, { ...init, signal: init?.signal ?? AbortSignal.timeout(30000) });
   } catch (e) {
     throw humanError(`${new URL(base).host}: ${e.name} ${e.message}`);
   }
@@ -44,7 +45,7 @@ async function politeFetch(base, url, init) {
     throw humanError(`${new URL(base).host} ${res.status} ${body?.error ?? body?.message ?? body?.code ?? ""}`.trim());
   return body;
 }
-const valhalla = (path, body) =>
+export const valhalla = (path, body) =>
   politeFetch(VALHALLA, `${VALHALLA}/${path}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 
 function cached(key) {
@@ -129,9 +130,23 @@ export function duration(min) {
   const m = Math.round(min), h = Math.floor(m / 60);
   return h === 0 ? `${m} min` : m % 60 === 0 ? `${h} h` : `${h} h ${m % 60} min`;
 }
-const km1 = (n) => n.toLocaleString("en-IN", { maximumFractionDigits: n < 100 ? 1 : 0 });
+export const km1 = (n) => n.toLocaleString("en-IN", { maximumFractionDigits: n < 100 ? 1 : 0 });
 
-const feature = (geom, kind, label, extra = {}) => ({ ...geom, properties: { ...geom.properties, kind, label, ...extra } });
+export const feature = (geom, kind, label, extra = {}) => ({ ...geom, properties: { ...geom.properties, kind, label, ...extra } });
+
+// a named region's official outline, cached
+export async function boundaryOf(place, ctx) {
+  const key = `bnd:${place.toLowerCase()}`;
+  let f = cached(key);
+  if (!f) {
+    const body = await politeFetch(NOMINATIM, `${NOMINATIM}?q=${encodeURIComponent(place)}&format=geojson&polygon_geojson=1&polygon_threshold=0.002&limit=1`);
+    f = body?.features?.[0];
+    if (!f || !/Polygon/.test(f.geometry.type)) throw new Error(`Nominatim: no boundary for "${place}"`);
+    store(key, f);
+  }
+  ctx.log("ok", "Nominatim", `${f.properties.display_name} (${f.properties.addresstype})`);
+  return f;
+}
 
 export async function execute(call, ctx) {
   const a = call.args;
@@ -222,20 +237,14 @@ export async function execute(call, ctx) {
       return [feature(line, "route", `${km.toFixed(1)} km profile`)];
     }
     case "boundary": {
-      const key = `bnd:${a.place.toLowerCase()}`;
-      let f = cached(key);
-      if (!f) {
-        const body = await politeFetch(NOMINATIM, `${NOMINATIM}?q=${encodeURIComponent(a.place)}&format=geojson&polygon_geojson=1&polygon_threshold=0.002&limit=1`);
-        f = body?.features?.[0];
-        if (!f || !/Polygon/.test(f.geometry.type)) throw new Error(`Nominatim: no boundary for "${a.place}"`);
-        store(key, f);
-      }
-      ctx.log("ok", "Nominatim", `${f.properties.display_name} (${f.properties.addresstype})`);
+      const f = await boundaryOf(a.place, ctx);
       ctx.result(`${a.place} · ${km1(turf.area(f) / 1e6)} km²`);
       return [feature({ type: "Feature", geometry: f.geometry, properties: {} }, "boundary", a.place)];
     }
     case "map":
       return ctx.mapAction(a);
+    case "inside":
+      return inside(a, ctx);
     case "reply":
       (ctx.reply ?? ctx.result)(a.text, a.kind);
       if (a.suggestions?.length) ctx.suggest(a.suggestions);

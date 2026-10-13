@@ -1,7 +1,7 @@
 import * as maplibregl from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { bbox } from "@turf/turf";
+import { bbox, centroid, booleanPointInPolygon, area as turfArea } from "@turf/turf";
 import Ajv from "ajv";
 import { TOOLS } from "../eval/tools.js";
 import golden from "../eval/golden.json";
@@ -145,6 +145,8 @@ function turnText(t) {
       if (offered.length) out.push(`  options: ${offered.join(" | ")}`);
     }
   }
+  const st = t.querySelector(".stats");
+  if (st) out.push(`  ${[...st.children].map((d) => `${d.lastChild.textContent} ${d.firstChild.textContent}`).join(" · ")}`);
   const chart = t.querySelector(".chart dl");
   if (chart) out.push(`  ${[...chart.querySelectorAll("dt")].map((dt) => `${dt.textContent} ${dt.nextElementSibling.textContent}`).join(" · ")}`);
   return out.join("\n");
@@ -275,8 +277,16 @@ function addLayers() {
     paint: { "line-color": "#F1F2F3", "line-width": 2.5, "line-dasharray": [2, 1.5] } });
   map.addLayer({ id: "selected-line", type: "line", source: "drawn", filter: ["all", ["!=", ["geometry-type"], "Point"], sel],
     paint: { "line-color": "#26A0D6", "line-width": 4 } });
-  map.addLayer({ id: "points", type: "circle", source: "drawn", filter: ["==", ["geometry-type"], "Point"],
-    paint: { "circle-radius": 5, "circle-color": "#F1F2F3", "circle-stroke-color": "#121518", "circle-stroke-width": 2 } });
+  // what was found inside an area: green cover, water below a level, buildings in 3D, earthquakes by magnitude
+  map.addLayer({ id: "green-fill", type: "fill", source: "drawn", filter: isKind(["green"]), paint: { "fill-color": "#5fae6b", "fill-opacity": 0.45 } });
+  map.addLayer({ id: "flood-fill", type: "fill", source: "drawn", filter: isKind(["flood"]), paint: { "fill-color": "#2f7fd1", "fill-opacity": 0.55 } });
+  map.addLayer({ id: "buildings-3d", type: "fill-extrusion", source: "drawn", filter: isKind(["building3d"]),
+    paint: { "fill-extrusion-height": ["get", "h"], "fill-extrusion-base": ["get", "b"], "fill-extrusion-opacity": 0.9,
+      "fill-extrusion-color": ["interpolate", ["linear"], ["get", "h"], 0, "#3a4049", 30, "#7d8794", 120, "#E1E2E4"] } });
+  map.addLayer({ id: "quakes", type: "circle", source: "drawn", filter: isKind(["quake"]),
+    paint: { "circle-radius": ["interpolate", ["linear"], ["get", "mag"], 2.5, 4, 7, 22], "circle-color": "#e07a6e", "circle-opacity": 0.55, "circle-stroke-color": "#e07a6e", "circle-stroke-width": 1 } });
+  map.addLayer({ id: "points", type: "circle", source: "drawn", filter: ["all", ["==", ["geometry-type"], "Point"], ["!=", ["get", "kind"], "quake"]],
+    paint: { "circle-radius": ["match", ["get", "kind"], "poi", 3.5, 5], "circle-color": "#F1F2F3", "circle-stroke-color": "#121518", "circle-stroke-width": ["match", ["get", "kind"], "poi", 1.5, 2] } });
   map.addLayer({ id: "selected-point", type: "circle", source: "drawn", filter: ["all", ["==", ["geometry-type"], "Point"], sel],
     paint: { "circle-radius": 8, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#26A0D6", "circle-stroke-width": 2.5 } });
   const text = { "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 12 };
@@ -556,6 +566,7 @@ function describe({ tool, args: a }) {
       case "polygon": return `polygon · ${a.vertices.map(nice).join(", ")}`;
       case "elevation_profile": return `elevation · ${trip(a.waypoints)}`;
       case "boundary": return `boundary · ${a.place}`;
+      case "inside": return `inside · ${a.what}${a.kind ? ` ${a.kind}` : ""}${a.level_m != null ? ` ${a.level_m} m` : ""}${a.since ? ` since ${a.since}` : ""} · ${insideOf(a.area)}`;
       case "map": return `map · ${[a.action, a.style, a.zoom, a.clear, a.lat != null ? `${a.lat}, ${a.lon}` : null].filter((x) => x != null).join(" ")}`;
       case "reply": return `reply · ${a.kind}`;
       case "plan": return `plan · ${a.steps.length} steps`;
@@ -584,6 +595,20 @@ function said({ tool, args: a }) {
       case "polygon": return [`Drawing an area between ${names(a.vertices)}…`, `Drew an area between ${names(a.vertices)}`];
       case "elevation_profile": return [`Reading heights along ${trip(a.waypoints)}…`, `Charted heights along ${trip(a.waypoints)}`];
       case "boundary": return [`Fetching the outline of ${a.place}…`, `Outlined ${a.place}`];
+      case "inside": {
+        const where = insideOf(a.area);
+        return {
+          places: [`Finding ${a.kind} in ${where}…`, `Found ${a.kind} in ${where}`],
+          summary: [`Counting what's in ${where}…`, `Counted what's in ${where}`],
+          green: [`Measuring the green in ${where}…`, `Measured the green in ${where}`],
+          roads: [`Measuring the roads in ${where}…`, `Measured the roads in ${where}`],
+          terrain: [`Reading heights in ${where}…`, `Read the terrain of ${where}`],
+          flood: [`Flooding ${where} to ${a.level_m ?? 2} m…`, `Flooded ${where} to ${a.level_m ?? 2} m`],
+          buildings: [`Raising the buildings in ${where}…`, `Raised the buildings in ${where}`],
+          wiki: [`Looking up notable places in ${where}…`, `Found notable places in ${where}`],
+          quakes: [`Looking up earthquakes in ${where}…`, `Looked up earthquakes in ${where}`],
+        }[a.what] ?? [`Looking inside ${where}…`, `Looked inside ${where}`];
+      }
       case "map": return {
         style: [`Switching to ${a.style}…`, `Switched to ${a.style}`], zoom: [`Zooming to ${a.zoom}…`, `Zoomed to ${a.zoom}`],
         center: ["Moving the map…", `Centered on ${a.lat}, ${a.lon}`], terrain: ["Turning the terrain…", "Toggled 3D terrain"],
@@ -623,6 +648,51 @@ function settleSoon() {
   settleTimer = setTimeout(() => t.classList.add("settled"), 8000);
 }
 
+const insideOf = (area) => (area === "@last" ? "the latest area" : area === "@selected" ? "the selected area" : area);
+
+// a row of numbers under the result: what an area holds
+function stats(rows) {
+  const box = document.createElement("div");
+  box.className = "stats";
+  for (const [k, v] of rows) box.insertAdjacentHTML("beforeend", "<div><b></b><span></span></div>"), (box.lastChild.firstChild.textContent = v), (box.lastChild.lastChild.textContent = k);
+  (turnEl ?? newTurn()).append(box);
+}
+
+// the area to look inside: the newest result that has one, its biggest shape (the outer ring of an isochrone)
+function latestArea() {
+  const areas = drawn.filter((f) => AREAS.includes(f.properties.kind));
+  const run = areas.at(-1)?.properties.run;
+  return areas.filter((f) => f.properties.run === run).sort((a, b) => turfArea(b) - turfArea(a))[0];
+}
+
+// 3D buildings inside an area: read from OpenFreeMap's vector tiles in view, kept when their middle is inside,
+// extruded from our own source so they show in LAYERS like any other result. Tiles carry buildings from zoom 14.
+async function buildings(area, ctx) {
+  if (!map.getSource("omt")) map.addSource("omt", { type: "vector", url: "https://tiles.openfreemap.org/planet" });
+  if (!map.getLayer("omt-probe")) map.addLayer({ id: "omt-probe", type: "fill", source: "omt", "source-layer": "building", paint: { "fill-opacity": 0 } });
+  const [w, s, e, n] = bbox(area);
+  map.fitBounds([w, s, e, n], { padding: 60, maxZoom: 16.5, duration: 0 });
+  const partial = map.getZoom() < 14;
+  if (partial) map.jumpTo({ center: centroid(area).geometry.coordinates, zoom: 14 });
+  // wait until the building tiles for this view are in (idle alone can fire before they start loading)
+  const t0 = Date.now();
+  await new Promise((r) => map.once("render", r));
+  while (!(map.isSourceLoaded("omt") && map.areTilesLoaded()) && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 150));
+  const seen = new Set(), out = [];
+  for (const f of map.querySourceFeatures("omt", { sourceLayer: "building" })) {
+    const g = { type: "Feature", geometry: f.geometry, properties: {} };
+    const key = f.id ?? JSON.stringify(f.geometry.coordinates).slice(0, 80);
+    if (seen.has(key) || !/Polygon/.test(g.geometry.type) || !booleanPointInPolygon(centroid(g), area)) continue;
+    seen.add(key);
+    const h = f.properties.render_height ?? 8;
+    out.push({ ...g, properties: { kind: "building3d", label: "", h, b: f.properties.render_min_height ?? 0 } });
+  }
+  map.removeLayer("omt-probe");
+  ctx.log("ok", "OpenFreeMap", `${out.length} buildings${partial ? ", the middle of the area only (zoom in for the rest)" : ""}`);
+  ctx.result(out.length ? `${out.length.toLocaleString("en-IN")} buildings, tallest ${Math.round(Math.max(...out.map((b) => b.properties.h)))} m` : "no buildings mapped here");
+  return out;
+}
+
 function chart(profile) {
   const pts = profile.filter(([, h]) => h != null);
   const km = pts.at(-1)[0], hs = pts.map((p) => p[1]);
@@ -638,7 +708,7 @@ function chart(profile) {
   (turnEl ?? newTurn()).append(box);
 }
 
-const baseCtx = { log, chart, result, suggest, mapAction, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
+const baseCtx = { log, chart, stats, result, suggest, mapAction, latestArea, buildings, selected: () => drawn.find((f) => f.properties.fid === selectedFid) };
 
 // ---- the form is generated from the same tool schema the model will fill
 
@@ -776,7 +846,8 @@ function fail(err, { message, again }) {
 function fitTo(feats) {
   if (!feats.length) return;
   const [w, s, e, n] = bbox({ type: "FeatureCollection", features: feats });
-  const flight = { curve: 1.6, speed: 1.1, maxDuration: 6000 }; // a far jump pulls out to the globe and arcs across
+  // a far jump pulls out to the globe and arcs across; buildings in 3D are looked at from an angle
+  const flight = { curve: 1.6, speed: 1.1, maxDuration: 6000, pitch: feats.some((f) => f.properties.kind === "building3d") ? 55 : map.getPitch() };
   if (w === e && s === n) map.flyTo({ center: [w, s], zoom: Math.max(map.getZoom(), 12), ...flight });
   else map.fitBounds([w, s, e, n], { padding: 60, maxZoom: 14, ...flight });
 }
@@ -991,6 +1062,7 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     ...baseCtx,
     log: (...a) => stale() || log(...a),
     chart: (p) => stale() || chart(p),
+    stats: (r) => stale() || stats(r),
     result: (text, status) => stale() || ((last = text), landed(), result(text, status)),
     reply: (text, kind) => stale() || ((last = text), landed(), reply(text, kind)),
     suggest: (list) => stale() || suggest(list),

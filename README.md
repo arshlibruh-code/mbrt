@@ -6,7 +6,7 @@ Chat to a map. Type "30 min drive from Koramangala" and get the reachable area d
 
 ## How it works
 
-A small model, Theo, reads the message and picks one of 11 tools as JSON (`{tool: "isochrone", args: {center: "Koramangala", unit: "minutes", values: [30]}}`). It never produces coordinates. Plain code does the rest: Photon finds the places, OSRM routes, Valhalla draws reach and heights, Turf draws buffers and polygons, Nominatim gives boundaries.
+A small model, Theo, reads the message and picks one of 12 tools as JSON (`{tool: "isochrone", args: {center: "Koramangala", unit: "minutes", values: [30]}}`). It never produces coordinates. Plain code does the rest: Photon finds the places, OSRM routes, Valhalla draws reach and heights, Turf draws buffers and polygons, Nominatim gives boundaries.
 
 Every tool also has a form, so the map works with no model at all. The feed reads like a chat: your message, one line from Theo ("Mapped a 30 min drive from Koramangala · 2.1 s"), the result. ▸ unfolds every step: the model, its tokens, what the geocoder found, the exact call. "copy conversation" copies the whole session as text.
 
@@ -21,6 +21,7 @@ Every tool also has a form, so the map works with no model at all. The feed read
 | elevation_profile | height chart along a route or a selected line |
 | boundary | official outline of a state, district or city |
 | map | style, zoom, center, 3D terrain, clear, locate |
+| inside | what an area holds: places of a kind, a summary, green cover, roads, terrain, flooding to a level, 3D buildings, notable places, earthquakes |
 | plan | several steps from one message, run one by one |
 | reply | asks back when something is missing |
 
@@ -58,7 +59,7 @@ npm run dev
 
 ## Eval
 
-`eval/` scores any model on 64 prompts: 50 real ones, 5 that should get a clarifying reply, 6 follow-ups that lean on earlier turns, 3 that need a plan.
+`eval/` scores any model on 74 prompts: 50 real ones, 5 that should get a clarifying reply, 6 follow-ups that lean on earlier turns, 3 that need a plan, 10 that look inside an area.
 
 ```
 cd eval && npm i
@@ -71,16 +72,18 @@ node run.js --compare                                                # every res
 Adapters: `opencode:<model>` (free, uses your OpenCode login; the tools go in the prompt), `zen:<model>` (OpenCode's paid API), `groq:<model>`, `codex[:model]` (your ChatGPT plan through the Codex CLI), and Anthropic by model name.
 
 Shipped: `gpt-oss-120b` on Groq, 96.9% (62/64), about 0.8 s per message.
-Free check on OpenCode: `mimo-v2.6-flash-free` 96.9% (62/64), `longcat-2.5-preview-free` 93.8% (60/64), about 10 s per message (OpenCode wraps every call in its own agent prompt).
+Free check on OpenCode: `mimo-v2.6-flash-free` 97.3% (72/74, every inside row right), about 7 s per message (OpenCode wraps every call in its own agent prompt).
 
 ## Stack
 
-MapLibre, OpenFreeMap, Photon, OSRM and Valhalla (FOSSGIS), Nominatim, Turf, AWS terrain tiles, Esri imagery. No Mapbox. Our key never reaches the browser; yours never reaches our server.
+MapLibre, OpenFreeMap, Photon, OSRM and Valhalla (FOSSGIS), Nominatim, Overpass, Wikipedia, USGS, Turf, AWS terrain tiles, Esri imagery. No Mapbox. Our key never reaches the browser; yours never reaches our server.
 
 ## Parked
 
 - Deploy to Pages: auto-deploy or by hand, a separate Groq account for the public site, a contact email (FOSSGIS asks for one), the absolute og:image URL.
 - Pick a direction in the style lab (`app/lab.html`: reticle, surveyor, phosphor) and port its tokens into the map.
 - Colour roles on the map and in LAYERS (cyan for the latest result, white for older ones), from the lab.
+- Isochrone fills with shader work: 4 distinct options on one page to compare.
+- "inside" in the TOOL tab (chat only for now). Overpass's public servers are often busy; places and green cover fail when all of them are.
 
 Map data © OpenStreetMap contributors.

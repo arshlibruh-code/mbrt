@@ -31,6 +31,14 @@ export const TOOLS = [
     { waypoints: places, profile }, ["waypoints", "profile"]),
   tool("boundary", "Official administrative outline of a named region (country, state, district, city).",
     { place }, ["place"]),
+  tool("inside", "Look inside an area: what it holds, from map data. area is \"@last\" for the latest area drawn (a circle, reach area, polygon or boundary, also \"this\", \"it\", \"here\" after drawing one), \"@selected\", or a region name. what: places (pins of one kind, put it in kind, e.g. \"cafes\"), summary (counts of everyday places), green (share of parks and woods), roads (km of roads, paths and cycle lanes), terrain (lowest, highest, average height), flood (what lies at or below level_m metres), buildings (in 3D), wiki (notable places with articles), quakes (earthquakes since a year).",
+    {
+      area: { type: "string" },
+      what: { type: "string", enum: ["places", "summary", "green", "roads", "terrain", "flood", "buildings", "wiki", "quakes"] },
+      kind: { type: "string" },
+      level_m: { type: "number" },
+      since: { type: "number" },
+    }, ["area", "what"]),
   tool("map", "Change the map itself: style (street, satellite, dark), zoom level, center on coordinates, toggle 3D terrain, clear layers, or locate the user.",
     {
       action: { type: "string", enum: ["style", "zoom", "center", "terrain", "clear", "locate"] },
