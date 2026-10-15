@@ -72,7 +72,7 @@ node run.js --compare                                                # every res
 Adapters: `opencode:<model>` (free, uses your OpenCode login; the tools go in the prompt), `zen:<model>` (OpenCode's paid API), `groq:<model>`, `codex[:model]` (your ChatGPT plan through the Codex CLI), and Anthropic by model name.
 
 Shipped: `gpt-oss-120b` on Groq, 96.9% (62/64), about 0.8 s per message.
-Free check on OpenCode: `mimo-v2.6-flash-free` 97.3% (72/74, every inside row right), about 7 s per message (OpenCode wraps every call in its own agent prompt).
+Free check on OpenCode: `mimo-v2.6-flash-free` 97.7% on the current prompt (214 of 219 answers over 3 runs of the 74 prompts; 3 more were lost to the OpenCode CLI's own database lock, not the model), about 7 s per message (OpenCode wraps every call in its own agent prompt).
 
 ## Stack
 
