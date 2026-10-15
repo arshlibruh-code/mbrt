@@ -1178,7 +1178,9 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
     if (fit) fitTo(feats);
     if (feats.some((f) => AREAS.includes(f.properties.kind))) {
       const area = feats.filter((f) => AREAS.includes(f.properties.kind)).sort((a, b) => turfArea(b) - turfArea(a))[0];
-      const row = chips([["summary", "summary"], ["cafés", "places"], ["green cover", "green"], ["roads", "roads"], ["terrain", "terrain"], ["flood level…", "flood"], ["3D buildings", "buildings"], ["notable places", "wiki"], ["earthquakes", "quakes"]].map(([label, what]) => [label, () => {
+      // four questions up front; the rest wait behind "more"
+      const FIRST = 4;
+      const row = chips([["what's inside", "summary"], ["how green", "green"], ["3D buildings", "buildings"], ["flood it", "flood"], ["cafés", "places"], ["roads", "roads"], ["terrain", "terrain"], ["notable places", "wiki"], ["earthquakes", "quakes"]].map(([label, what]) => [label, () => {
         if (!drawn.includes(area) || area.properties.hidden) return;
         selectedFid = area.properties.fid; refresh();
         if (what === "flood") { send("Show flooding inside the selected area, ask me for the water level in metres first."); return; }
@@ -1186,6 +1188,11 @@ async function runCall(call, stale = () => false, fit = true, by = "") {
         $("form").requestSubmit();
       }]));
       row.classList.add("inside-options");
+      const extra = [...row.children].slice(FIRST);
+      extra.forEach((b) => (b.hidden = true));
+      const more = Object.assign(document.createElement("button"), { type: "button", textContent: "more" });
+      more.addEventListener("click", () => (extra.forEach((b) => (b.hidden = false)), more.remove()));
+      row.append(more);
     }
     if (call.tool === "isochrone")
       chips([["3D", (e) => looks.lift(run, feats, e.currentTarget)]]);
